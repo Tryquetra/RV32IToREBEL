@@ -54,11 +54,10 @@ private:
    void doStoreToHeap(std::uint32_t heapAddress, const Tint& value, std::uint8_t numTrytes);
    void ensureHeapCapacity(std::uint32_t endAddress);
 
-   using InstructionMemoryMap = std::map<std::int32_t, Expressions::Instruction*>; // Address | Instruction
    using SymbolTableMap = std::map<std::string, std::int32_t>; // Label name | Start address of value
    using HeapVector = Trytes;
 
-   InstructionMemoryMap m_instructions; // Address, Instruction
+   std::vector<Expressions::Instruction*> m_instructions; // One slot per instruction
    std::uint32_t m_instructionsSize;
    std::uint32_t m_heapSizeTrytes;
    std::uint32_t m_memoryLimitTrytes;

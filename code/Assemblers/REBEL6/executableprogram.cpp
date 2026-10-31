@@ -31,21 +31,15 @@ ExecutableProgram::ExecutableProgram()
 
 ExecutableProgram::~ExecutableProgram()
 {
-   InstructionMemoryMap::iterator iter = m_instructions.begin();
-   for(; iter != m_instructions.end(); )
+   for(Expressions::Instruction* instruction: m_instructions)
    {
-      if (iter->second != nullptr)
-      {
-         delete iter->second;
-         iter->second == nullptr;
-      }
-      iter = m_instructions.erase(iter);
+      delete instruction;
    }
 }
 
 void ExecutableProgram::addInstruction(Expressions::Instruction* instruction, std::uint8_t instructionSize)
 {
-   m_instructions.insert({m_instructionsSize, instruction});
+   m_instructions.push_back(instruction);
    m_instructionsSize += instructionSize;
 }
 
@@ -73,22 +67,12 @@ bool ExecutableProgram::addSymbol(const std::string& symbolName, std::int32_t ad
 
 Expressions::Instruction* ExecutableProgram::loadInstruction(std::int32_t programCounter, std::uint8_t& instructionSize) const
 {
-   Expressions::Instruction* instr = nullptr;
-   InstructionMemoryMap::const_iterator it = m_instructions.find(programCounter);
-   if(it != m_instructions.end())
+   if((programCounter < 0) || (static_cast<std::uint32_t>(programCounter) >= m_instructions.size()))
    {
-      instr = it->second;
-      ++it;
-      if(it == m_instructions.end())
-      {
-         instructionSize = m_instructionsSize - programCounter;
-      }
-      else
-      {
-         instructionSize = it->first - programCounter;
-      }
+      return nullptr;
    }
-   return instr;
+   instructionSize = 1; // Every REBEL-6 instruction occupies one slot.
+   return m_instructions[static_cast<std::uint32_t>(programCounter)];
 }
 
 void ExecutableProgram::ensureHeapCapacity(std::uint32_t endAddress)
@@ -215,15 +199,9 @@ std::uint32_t ExecutableProgram::getInstructionsSizeTrytes() const
 
 void ExecutableProgram::printInstructions() const
 {
-   std::int32_t pc = 0;
-   InstructionMemoryMap::const_iterator it = m_instructions.begin();
-   while(it != m_instructions.end())
+   for(std::uint32_t pc = 0; pc < m_instructions.size(); ++pc)
    {
-
-      std::cout << pc << ": " << *(it->second) << std::endl;
-
-      pc += it->first;
-      ++it;
+      std::cout << pc << ": " << *m_instructions[pc] << std::endl;
    }
 }
 
