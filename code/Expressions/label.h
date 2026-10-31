@@ -15,6 +15,7 @@ public:
    virtual std::ostream& printToStream(std::ostream& stream) const;
 
    const std::string& getLabelName() const;
+   void setLabelName(const std::string& labelName) { m_name = labelName; }
 
 private:
    std::string m_name;

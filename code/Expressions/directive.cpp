@@ -45,3 +45,8 @@ const std::vector<std::string>& Directive::getDirectiveParameters() const
 }
 
 }
+
+std::vector<std::string>& Expressions::Directive::getDirectiveParameters()
+{
+   return m_parameters;
+}

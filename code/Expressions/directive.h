@@ -18,6 +18,7 @@ public:
 
    const std::string& getDirectiveName() const;
    const std::vector<std::string>& getDirectiveParameters() const;
+   std::vector<std::string>& getDirectiveParameters();
 
 private:
 

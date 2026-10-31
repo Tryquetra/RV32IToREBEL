@@ -26,6 +26,7 @@ public:
   void run();
 
   void printExpressionsToFile(const std::string& fileName);
+  std::uint32_t getBssSizeTrytes() const { return static_cast<std::uint32_t>(m_bssSizeTrytes); }
 private:
   void handleTextSection(const Expressions::Expression* expr);
   void handleDataSection(const Expressions::Expression* expr);

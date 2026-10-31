@@ -43,6 +43,8 @@ public:
    std::uint32_t getMemoryLimitTrytes() const;
    void setMemoryLimitTrytes(std::uint32_t limit);
 
+   const std::map<std::string, std::int32_t>& getSymbols() const { return m_symbolTable; }
+
    void printInstructions() const;
    void printSymbols() const;
 
