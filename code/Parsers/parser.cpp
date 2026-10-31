@@ -46,9 +46,12 @@ void Parser::match(TokenType type)
 
 void Parser::nextToken()
 {
+   // Read the new token before touching the current ones: nextToken may throw on bad input,
+   // and leaving m_token and m_peek pointing at the same object would double free.
+   Token* next = m_l->nextToken();
    delete m_token;
    m_token = m_peek;
-   m_peek = m_l->nextToken();
+   m_peek = next;
 }
 
 //TODO: Update this according to actual documentation found at https://sourceware.org/binutils/docs/as/ (chapter 5) and https://github.com/riscv-non-isa/riscv-asm-manual/blob/master/riscv-asm.md

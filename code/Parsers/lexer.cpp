@@ -4,6 +4,10 @@
 #include "lexer.h"
 #include "token.h"
 
+#include <errors.h>
+
+#include <memory>
+
 #define EOFConstant 3 // Using 0 is annoying for debugging.
 
 Lexer::Lexer(const std::string& source)
@@ -41,16 +45,17 @@ void Lexer::nextChar()
 
 char Lexer::peekChar()
 {
-   if(m_pos + 1 >= m_source.length())
+   if(m_pos >= m_source.length())
    {
       return EOFConstant;
    }
-   return m_source[m_pos + 1];
+   return m_source[m_pos];
 }
 
 Token* Lexer::nextToken()
 {
-   Token *t = new Token();
+   auto token = std::make_unique<Token>();
+   Token* t = token.get();
    skipSpaces();
    t->line = m_line;
    t->column = m_column;
@@ -95,8 +100,8 @@ Token* Lexer::nextToken()
    case '#':
       t->type = TokenType::Comment;
       nextChar();
-      while(!isNewline())
-      { // Continue until newline.
+      while(!isNewline() && (m_ch != EOFConstant) && (m_ch != 0))
+      { // Continue until newline or end of file.
          t->literal += m_ch;
          nextChar();
       }
@@ -112,10 +117,14 @@ Token* Lexer::nextToken()
       {
          // String literal.
          nextChar();
-         while(m_ch != '"')
+         while((m_ch != '"') && (m_ch != EOFConstant) && (m_ch != 0))
          {
             t->literal += m_ch;
             nextChar();
+         }
+         if((m_ch != '"'))
+         {
+            throw RebelError("unterminated string literal", {t->line, t->column});
          }
          t->literal += m_ch; // Include ending quotation mark.
          nextChar();
@@ -130,7 +139,7 @@ Token* Lexer::nextToken()
          }
       }
    }
-   return t;
+   return token.release();
 }
 
 bool Lexer::isPunct()
