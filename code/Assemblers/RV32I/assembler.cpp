@@ -357,7 +357,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       byteSizePerElement = 1;
       for(const std::string& param: parameters)
       {
-         for(int i = 0; i <= param.size(); ++i) // Include terminating zero
+         for(std::size_t i = 0; i <= param.size(); ++i) // Include terminating zero
          {
             ParseUtils::parseImmediate(8, param.c_str()[i], value);
             values.push_back(value);

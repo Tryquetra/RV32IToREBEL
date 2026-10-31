@@ -181,22 +181,6 @@ std::string stemOf(const std::string& path)
    return std::filesystem::path(path).stem().string();
 }
 
-bool isSymbolToken(const std::string& text)
-{
-   if(text.empty() || (!std::isalpha(static_cast<unsigned char>(text[0])) && (text[0] != '_') && (text[0] != '.') && (text[0] != '$')))
-   {
-      return false;
-   }
-   for(char c: text)
-   {
-      if(!std::isalnum(static_cast<unsigned char>(c)) && (c != '_') && (c != '.') && (c != '$'))
-      {
-         return false;
-      }
-   }
-   return true;
-}
-
 std::vector<std::string> collectRelocations(const Linker::Unit& unit)
 {
    std::vector<std::string> relocations;

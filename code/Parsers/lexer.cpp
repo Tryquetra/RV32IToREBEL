@@ -32,7 +32,7 @@ void Lexer::nextChar()
       ++m_column;
    }
 
-   if(m_pos >= m_source.length())
+   if(static_cast<std::size_t>(m_pos) >= m_source.length())
    {
       m_ch = EOFConstant;
    }
@@ -45,7 +45,7 @@ void Lexer::nextChar()
 
 char Lexer::peekChar()
 {
-   if(m_pos >= m_source.length())
+   if(static_cast<std::size_t>(m_pos) >= m_source.length())
    {
       return EOFConstant;
    }

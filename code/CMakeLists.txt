@@ -86,3 +86,11 @@ set(SOURCES
 
 # Add the executable
 add_executable(RV32IToREBEL ${SOURCES} ${HEADERS})
+
+if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+   target_compile_options(RV32IToREBEL PRIVATE -Wall -Wextra -Wno-unused-parameter)
+endif()
+
+enable_testing()
+add_test(NAME determinism
+         COMMAND ${CMAKE_CURRENT_SOURCE_DIR}/../scripts/check-determinism.sh $<TARGET_FILE:RV32IToREBEL>)

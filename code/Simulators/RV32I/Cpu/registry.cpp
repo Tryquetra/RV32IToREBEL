@@ -39,7 +39,7 @@ void convertToABI(const std::string& in, std::string& out)
    if(out[0] == 'x')
    {
       std::int32_t index = stoi(out.substr(1, out.length()));
-      if((index >= 0) && (index < RegisterABINames.size()) )
+      if((index >= 0) && (static_cast<std::size_t>(index) < RegisterABINames.size()))
       {
          out = RegisterABINames[index];
       }

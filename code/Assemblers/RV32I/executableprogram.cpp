@@ -30,7 +30,6 @@ ExecutableProgram::~ExecutableProgram()
       if (iter->second != nullptr)
       {
          delete iter->second;
-         iter->second == nullptr;
       }
       iter = m_instructions.erase(iter);
    }
@@ -44,7 +43,7 @@ void ExecutableProgram::addInstruction(Expressions::Instruction* instruction, st
 
 void ExecutableProgram::addToHeap(std::int32_t value, std::uint8_t numBytes)
 {
-   if((numBytes > 4) || (numBytes < 0))
+   if((numBytes > 4))
    {
       std::cerr << __PRETTY_FUNC__ << ": Trying to store data of unsupported size = " << numBytes << " bytes" << std::endl;
       abort();
@@ -82,7 +81,7 @@ Expressions::Instruction* ExecutableProgram::loadInstruction(std::uint32_t progr
 std::int32_t ExecutableProgram::loadFromHeap(std::uint32_t address, std::uint8_t numBytes) const
 {
    std::int32_t retVal = 0;
-   if((numBytes > 4) || (numBytes < 0))
+   if((numBytes > 4))
    {
       std::cerr << __PRETTY_FUNC__ << ": Trying to load data of unsupported byte size " << numBytes << std::endl;
       abort();
@@ -117,7 +116,7 @@ std::uint32_t ExecutableProgram::loadSymbolAddress(const std::string& symbolName
 
 void ExecutableProgram::storeToHeap(std::uint32_t address, std::int32_t value, std::uint8_t numBytes)
 {
-   if((numBytes > 4) || (numBytes < 0))
+   if((numBytes > 4))
    {
       std::cerr << __PRETTY_FUNC__ << ": Trying to store data of unsupported byte size " << numBytes << std::endl;
       abort();
@@ -132,7 +131,7 @@ void ExecutableProgram::storeToHeap(std::uint32_t address, std::int32_t value, s
 void ExecutableProgram::calculateMemorySize()
 {
    std::int32_t memorySize = getProgramSizeBytes() - getInstructionsSizeBytes();
-   if((memorySize < 0 ) || (m_heapSizeBytes > memorySize))
+   if((memorySize < 0) || (m_heapSizeBytes > static_cast<std::uint32_t>(memorySize)))
    {
       std::cerr << __PRETTY_FUNC__ << ": Tried recalcuating memory size, but memory already overflowing" << std::endl;
       abort();

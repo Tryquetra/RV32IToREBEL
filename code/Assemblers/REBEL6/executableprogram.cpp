@@ -45,7 +45,7 @@ void ExecutableProgram::addInstruction(Expressions::Instruction* instruction, st
 
 void ExecutableProgram::addToHeap(const Tint& value, std::uint8_t numTrytes)
 {
-   if((numTrytes > 4) || (numTrytes < 0))
+   if((numTrytes > 4))
    {
       throw RebelError("unsupported store size " + std::to_string(numTrytes));
    }
@@ -94,7 +94,7 @@ void ExecutableProgram::ensureHeapCapacity(std::uint32_t endAddress)
 
 void ExecutableProgram::loadFromHeap(std::int32_t address, std::uint8_t numTrytes, Trytes& out) const
 {
-   if((numTrytes > 4) || (numTrytes < 0))
+   if((numTrytes > 4))
    {
       throw RebelError("unsupported load size " + std::to_string(numTrytes));
    }
@@ -141,7 +141,7 @@ std::int32_t ExecutableProgram::loadSymbolAddress(const std::string& symbolName)
 
 void ExecutableProgram::storeToHeap(std::int32_t address, const Tint& value, std::uint8_t numTrytes)
 {
-   if((numTrytes > 4) || (numTrytes < 0))
+   if((numTrytes > 4))
    {
       throw RebelError("unsupported store size " + std::to_string(numTrytes));
    }

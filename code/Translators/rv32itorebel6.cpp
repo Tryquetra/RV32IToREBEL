@@ -36,11 +36,6 @@ std::string convertBinaryInstructionOffsetToTernary(const std::string& offsetRs)
    return convertBinaryOffsetToTernary(offsetRs, REBEL6_JUMPS_PER_INSTRUCTION);
 }
 
-void createInstruction(Expressions::ExpressionList& el, const std::string& name)
-{
-   el.push_back(new Expressions::Instruction(name, std::vector<std::string>()));
-}
-
 void createInstruction(Expressions::ExpressionList& el, const std::string& name, const std::string& op0, const std::string& op1)
 {
    std::vector<std::string> operands = {op0, op1};
@@ -51,12 +46,6 @@ void createInstruction(Expressions::ExpressionList& el, const std::string& name,
 {
    std::vector<std::string> operands = {op0, op1, op2};
    el.push_back( new Expressions::Instruction(name, operands) );
-}
-
-void createInstruction(Expressions::ExpressionList& el, const std::string& name, const std::string& rs1, const std::string& rs2, const std::string& rd1, const std::string& rd2)
-{
-   std::vector<std::string> operands = {rs1, rs2, rd1, rd2};
-   el.push_back(new Expressions::Instruction(name, operands));
 }
 
 // l{b|h|w}{u}{.t} rd, offset(rs) --> l{b|h|w}{u}{.t} rd, offset(rs)

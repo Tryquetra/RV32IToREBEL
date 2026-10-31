@@ -467,7 +467,7 @@ namespace Simulators
             {
                throw TestResult{true, 0};
             }
-            throw TestResult{false, m_registers.load("gp")};
+            throw TestResult{false, static_cast<int>(m_registers.load("gp"))};
          }
          // else if(name == "ebreak") ;
          // else if(name == "sb") ;

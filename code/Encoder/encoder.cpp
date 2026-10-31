@@ -52,11 +52,6 @@ void putField(std::uint64_t& word, std::size_t offset, std::uint8_t width, std::
    }
 }
 
-std::vector<std::string> splitOperands(const std::vector<std::string>& operands)
-{
-   return operands;
-}
-
 bool parseRegister(const std::string& name, std::int64_t& out)
 {
    if((name.size() > 1) && (name[0] == 'x'))

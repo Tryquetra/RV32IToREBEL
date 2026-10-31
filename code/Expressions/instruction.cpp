@@ -22,7 +22,7 @@ std::ostream& Instruction::printToStream(std::ostream& stream) const
 {
    stream << m_name << " ";
 
-   for(std::int32_t i = 0; i < m_operands.size(); ++i)
+   for(std::size_t i = 0; i < m_operands.size(); ++i)
    {
       if(i != 0)
       {

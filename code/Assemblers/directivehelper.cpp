@@ -33,7 +33,7 @@ bool DirectiveHelper::resolveSectionTypeAndIfChanged(const Expressions::Directiv
    if(it == directiveSectionMap.end())
    {
       // Variants such as .text.start or .data.rel.local select their base section.
-      for(const std::string& base: {".text", ".rodata", ".bss", ".data"})
+      for(const char* base: {".text", ".rodata", ".bss", ".data"})
       {
          if(section.find(base) != std::string::npos)
          {

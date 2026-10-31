@@ -106,7 +106,7 @@ void CPU::executeProgram(ExecutableProgram& program)
       ++m_numberOfRanInstructions;
       m_PC += instructionSize;
 
-      if(m_PC == ProgramEndRAValue)
+      if(m_PC == static_cast<std::uint32_t>(ProgramEndRAValue))
       {
          break;
       }
