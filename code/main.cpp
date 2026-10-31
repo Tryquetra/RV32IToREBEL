@@ -35,6 +35,7 @@ struct Options
    bool emitObject = false;
    bool emitImage = false;
    bool link = false;
+   bool check = false;
 };
 
 struct AssemblyResult
@@ -65,6 +66,10 @@ Options parseOptions(int argc, char* argv[])
       {
          options.emitImage = true;
       }
+      else if(arg == "--check")
+      {
+         options.check = true;
+      }
       else if(arg == "--link")
       {
          options.link = true;
@@ -92,6 +97,7 @@ Options parseOptions(int argc, char* argv[])
                       "  --link                link several units into one image\n"
                       "  --emit-obj            write a .mto object per input\n"
                       "  --emit-image          write an R6IM image next to the .tas\n"
+                      "  --check               assemble and validate without writing outputs\n"
                       "  --target <isa>        translation target (rebel-6)\n"
                       "  --memory <trytes>     heap limit, default 8 MiB\n";
          std::exit(0);
@@ -273,7 +279,11 @@ int linkUnits(const Options& options)
 
    Expressions::ExpressionList merged = Linker::link(units);
    const std::string base = options.output.empty() ? "linked" : options.output;
-   assemble(merged, base, true, options.memory, options.emitImage);
+   assemble(merged, base, !options.check, options.memory, options.emitImage && !options.check);
+   if(options.check)
+   {
+      std::cout << "check: ok" << std::endl;
+   }
    return 0;
 }
 
@@ -287,7 +297,12 @@ int singleUnit(const Options& options)
    {
       Linker::Unit unit = Linker::Unit::fromObject(stem, source);
       Expressions::ExpressionList& expressions = unit.getExpressions();
-      assemble(expressions, options.output.empty() ? stem : options.output, true, options.memory, options.emitImage);
+      assemble(expressions, options.output.empty() ? stem : options.output, !options.check, options.memory,
+               options.emitImage && !options.check);
+      if(options.check)
+      {
+         std::cout << "check: ok" << std::endl;
+      }
       return 0;
    }
 
@@ -295,7 +310,7 @@ int singleUnit(const Options& options)
    {
       Linker::Unit unit = Linker::Unit::fromAssembly(stem, source);
       const std::vector<std::string> relocations = collectRelocations(unit);
-      AssemblyResult result = assemble(unit.getExpressions(), stem, false, options.memory, options.emitImage);
+      AssemblyResult result = assemble(unit.getExpressions(), stem, false, options.memory, false);
       unit.writeObject(stem + ".mto", result.symbols, relocations, result.bss);
       return 0;
    }
@@ -313,7 +328,12 @@ int singleUnit(const Options& options)
       delete expr;
    }
 
-   assemble(translated, options.output.empty() ? stem : options.output, true, options.memory, options.emitImage);
+   assemble(translated, options.output.empty() ? stem : options.output, !options.check, options.memory,
+            options.emitImage && !options.check);
+   if(options.check)
+   {
+      std::cout << "check: ok" << std::endl;
+   }
    return 0;
 }
 
