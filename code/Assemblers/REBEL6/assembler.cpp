@@ -128,10 +128,14 @@ void Assembler::handleTextSection(const Expressions::Expression* expr)
       case Expressions::Expression::ExpressionType::DIRECTIVE:
       {
          const Expressions::Directive* directive = static_cast<const Expressions::Directive*>(expr);
-         // Not expecting any directives while handling .text
+         // Not expecting any directives while handling .text, except common symbols.
          if(DirectiveHelper::resolveSectionTypeAndIfChanged(*directive, m_sectionType))
          {
             return;
+         }
+         if((directive->getDirectiveName() == ".comm") || (directive->getDirectiveName() == ".lcomm"))
+         {
+            resolveDataDirective(directive);
          }
          break;
       }
@@ -284,7 +288,32 @@ void Assembler::handleRoDataSection(const Expressions::Expression* expr)
 bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::uint8_t& tryteSizePerElement, std::vector<Tint>& values)
 {
    bool retVal = true;
-   const std::string& name = directive->getDirectiveName();
+   const std::string& rawName = directive->getDirectiveName();
+   std::string name = rawName;
+   if((name == ".int") || (name == ".long"))
+   {
+      name = ".word";
+   }
+   else if((name == ".short") || (name == ".hword"))
+   {
+      name = ".half";
+   }
+   else if((name == ".space") || (name == ".skip"))
+   {
+      name = ".zero";
+   }
+   else if(name == ".2byte")
+   {
+      name = ".half";
+   }
+   else if(name == ".4byte")
+   {
+      name = ".word";
+   }
+   else if(name == ".asciz")
+   {
+      name = ".string";
+   }
    const std::vector<std::string> parameters = directive->getDirectiveParameters();
    std::int32_t value;
 
@@ -734,8 +763,46 @@ bool Assembler::handleAlignment(const Expressions::Directive* directive, std::in
    return true;
 }
 
+void Assembler::handleCommon(const Expressions::Directive* directive)
+{
+   const std::vector<std::string>& parameters = directive->getDirectiveParameters();
+   if(parameters.size() < 2)
+   {
+      throw RebelError("common symbol needs a name and a size", directive->getLocation());
+   }
+   const std::string& symbol = parameters[0];
+   std::int64_t size = 0;
+   if(!ParseUtils::parseInteger(parameters[1], size) || (size < 0))
+   {
+      throw RebelError("invalid common symbol size \"" + parameters[1] + "\"", directive->getLocation());
+   }
+   if(parameters.size() > 2)
+   {
+      std::int64_t alignment = 0;
+      if(ParseUtils::parseInteger(parameters[2], alignment) && (alignment > 0))
+      {
+         while((m_bssSizeTrytes % alignment) != 0)
+         {
+            ++m_bssSizeTrytes;
+         }
+      }
+   }
+   if(!m_bssLabels.insert({symbol, m_bssSizeTrytes}).second)
+   {
+      throw RebelError("duplicate symbol \"" + symbol + "\"", directive->getLocation());
+   }
+   m_labelLocations[symbol] = directive->getLocation();
+   m_bssSizeTrytes += static_cast<std::int32_t>(size);
+}
+
 void Assembler::resolveDataDirective(const Expressions::Directive* directive)
 {
+   const std::string& directiveName = directive->getDirectiveName();
+   if((directiveName == ".comm") || (directiveName == ".lcomm"))
+   {
+      handleCommon(directive);
+      return;
+   }
    if(handleAlignment(directive, m_hc))
    {
       return;

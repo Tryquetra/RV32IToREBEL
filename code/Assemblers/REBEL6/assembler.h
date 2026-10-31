@@ -35,6 +35,7 @@ private:
 
   void resolveDataDirective(const Expressions::Directive* directive);
   bool handleAlignment(const Expressions::Directive* directive, std::int32_t& cursor);
+  void handleCommon(const Expressions::Directive* directive);
 
   bool resolveIfObject(const Expressions::Directive* directive, std::uint8_t& tryteSizePerElement, std::vector<Tint>& values);
 
