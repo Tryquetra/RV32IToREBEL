@@ -11,7 +11,7 @@
 namespace
 {
 // Initial allocation. The heap grows on demand up to the memory limit.
-const std::uint32_t INITIAL_PROGRAM_SIZE_TRYTES = std::pow(3, 13) + 1; // About 1.6m trytes, add +1 so it becomes 4 tryte aligned and works with RV32I pointer arithmetic
+const std::uint32_t INITIAL_PROGRAM_SIZE_TRYTES = POW3[13] + 1; // About 1.6m trytes, add +1 so it becomes 4 tryte aligned and works with RV32I pointer arithmetic
 // Matches the 8 MiB data memory of the Setun-Doom REBEL-6 core.
 const std::uint32_t DEFAULT_MEMORY_LIMIT_TRYTES = 8u * 1024u * 1024u;
 }
@@ -237,7 +237,8 @@ void ExecutableProgram::printSymbols() const
 
 void ExecutableProgram::doStoreToHeap(std::uint32_t heapAddress, const Tint& value, std::uint8_t numTrytes)
 {
-   Trits trits;
+   static thread_local Trits trits;
+   trits.clear();
    TernaryLogic::tintToTrits(value, trits); // Could send m_heap directly, but lets keep it safe
    std::uint8_t numTrits = numTrytes * REBEL6_TRITS_PER_TRYTE;
 
@@ -255,7 +256,7 @@ void ExecutableProgram::doStoreToHeap(std::uint32_t heapAddress, const Tint& val
       Tryte val = 0;
       for(std::uint8_t j = 0; j < REBEL6_TRITS_PER_TRYTE; ++j)
       {
-         val += (trits[j + (i * REBEL6_TRITS_PER_TRYTE)] * std::pow(3, j));
+         val += (trits[j + (i * REBEL6_TRITS_PER_TRYTE)] * POW3[j]);
       }
 
       m_memory[heapAddress] = val;

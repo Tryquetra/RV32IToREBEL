@@ -51,7 +51,7 @@ void TernaryLogic::tritsToTint(const Trits& in, Tint& out)
    out = 0;
    for(char i = 0; i < in.size(); ++i)
    {
-      out += in[i] * std::pow(3, i);
+      out += in[i] * POW3[static_cast<std::uint8_t>(i)];
    }
 }
 

@@ -19,8 +19,8 @@ namespace
 {
    // Set ra to some irrational and easily detectable value. GCC, and possibly other compilers, adds a "jr ra" at the end of the main routine to return to some caller.
    // This value is used to detect when that happens.
-   const std::int32_t ProgramEndRAValue = -std::pow(3, 16); // Just some random negative number where only a single trit is set, minimizing the impact it has on tritflips
-   const std::int16_t RegisterCount = std::pow(3, 6);       // 729
+   const std::int32_t ProgramEndRAValue = -static_cast<std::int32_t>(POW3[16]); // Just some random negative number where only a single trit is set, minimizing the impact it has on tritflips
+   const std::int16_t RegisterCount = POW3[6];              // 729
 }
 
 namespace Simulators
