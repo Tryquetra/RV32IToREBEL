@@ -66,7 +66,7 @@ void CPU::executeProgram(ExecutableProgram& program)
    {
       const std::string& name = instr->getInstructionName();
       const std::vector<std::string>& operands = instr->getInstructionOperands();
-      type = AssemblerUtils::getInstructionType(name);
+      type = static_cast<AssemblerUtils::InstructionType>(instr->getType());
       // std::cout << "pc = " << m_PC << "\t" << *instr << std::endl;
 
       switch(type)

@@ -1,5 +1,7 @@
 #include "executableprogram.h"
 
+#include <Assemblers/RV32I/assemblerutils.h>
+
 #include <Expressions/instruction.h>
 #include <logger.h>
 
@@ -37,6 +39,7 @@ ExecutableProgram::~ExecutableProgram()
 
 void ExecutableProgram::addInstruction(Expressions::Instruction* instruction, std::uint8_t instructionSizeBytes)
 {
+   instruction->setType(static_cast<std::uint8_t>(AssemblerUtils::getInstructionType(instruction->getInstructionName())));
    m_instructions.insert({m_instructionsSizeBytes, instruction});
    m_instructionsSizeBytes += instructionSizeBytes;
 }

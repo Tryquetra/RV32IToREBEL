@@ -1,6 +1,7 @@
 #include "executableprogram.h"
 
 #include <Translators/rv32itorebel6.h>
+#include <Assemblers/REBEL6/assemblerutils.h>
 #include <Expressions/instruction.h>
 #include <logger.h>
 #include <errors.h>
@@ -39,6 +40,7 @@ ExecutableProgram::~ExecutableProgram()
 
 void ExecutableProgram::addInstruction(Expressions::Instruction* instruction, std::uint8_t instructionSize)
 {
+   instruction->setType(static_cast<std::uint8_t>(AssemblerUtils::getInstructionType(instruction->getInstructionName())));
    m_instructions.push_back(instruction);
    m_instructionsSize += instructionSize;
 }
