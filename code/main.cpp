@@ -1,3 +1,4 @@
+#include "Linker/linker.h"
 #include "Linker/unit.h"
 
 #include "Parsers/lexer.h"
@@ -31,6 +32,7 @@ struct Options
    std::string target = "rebel-6";
    std::uint32_t memory = 0;
    bool emitObject = false;
+   bool link = false;
 };
 
 struct AssemblyResult
@@ -57,6 +59,10 @@ Options parseOptions(int argc, char* argv[])
       {
          options.emitObject = true;
       }
+      else if(arg == "--link")
+      {
+         options.link = true;
+      }
       else if(arg == "--target")
       {
          if(i + 1 >= argc)
@@ -77,6 +83,7 @@ Options parseOptions(int argc, char* argv[])
       {
          std::cout << "usage: RV32IToREBEL [options] <file.s|file.mto>...\n"
                       "  -o, --output <path>   output name (without extension)\n"
+                      "  --link                link several units into one image\n"
                       "  --emit-obj            write a .mto object per input\n"
                       "  --target <isa>        translation target (rebel-6)\n"
                       "  --memory <trytes>     heap limit, default 8 MiB\n";
@@ -215,6 +222,29 @@ AssemblyResult assemble(Expressions::ExpressionList& expressions, const std::str
    return result;
 }
 
+int linkUnits(const Options& options)
+{
+   std::vector<Linker::Unit> units;
+   for(const std::string& input: options.inputs)
+   {
+      const std::string source = readFile(input);
+      const std::string stem = stemOf(input);
+      if(input.size() > 4 && input.compare(input.size() - 4, 4, ".mto") == 0)
+      {
+         units.push_back(Linker::Unit::fromObject(stem, source));
+      }
+      else
+      {
+         units.push_back(Linker::Unit::fromAssembly(stem, source));
+      }
+   }
+
+   Expressions::ExpressionList merged = Linker::link(units);
+   const std::string base = options.output.empty() ? "linked" : options.output;
+   assemble(merged, base, true, options.memory);
+   return 0;
+}
+
 int singleUnit(const Options& options)
 {
    const std::string& input = options.inputs.front();
@@ -263,9 +293,9 @@ int run(int argc, char* argv[])
       std::cerr << "usage: RV32IToREBEL [options] <file.s|file.mto>...\n";
       return 2;
    }
-   if(options.inputs.size() > 1)
+   if(options.link || (options.inputs.size() > 1))
    {
-      throw RebelError("multiple inputs need the linker");
+      return linkUnits(options);
    }
    return singleUnit(options);
 }
