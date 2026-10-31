@@ -3,6 +3,7 @@
 #include <Translators/rv32itorebel6.h>
 #include <Expressions/instruction.h>
 #include <logger.h>
+#include <errors.h>
 
 #include <iostream>
 #include <math.h>
@@ -52,8 +53,7 @@ void ExecutableProgram::addToHeap(const Tint& value, std::uint8_t numTrytes)
 {
    if((numTrytes > 4) || (numTrytes < 0))
    {
-      std::cerr << __PRETTY_FUNC__ << ": Trying to store data of unsupported size = " << numTrytes << " trits" << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported store size " + std::to_string(numTrytes));
    }
 
    doStoreToHeap(m_heapSizeTrytes, value, numTrytes);
@@ -106,8 +106,7 @@ void ExecutableProgram::loadFromHeap(std::int32_t address, std::uint8_t numTryte
 {
    if((numTrytes > 4) || (numTrytes < 0))
    {
-      std::cerr << __PRETTY_FUNC__ << ": Trying to load data of unsupported tryte size " << numTrytes << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported load size " + std::to_string(numTrytes));
    }
 
    if(address < static_cast<std::int32_t>(getInstructionsSizeTrytes()))
@@ -154,8 +153,7 @@ void ExecutableProgram::storeToHeap(std::int32_t address, const Tint& value, std
 {
    if((numTrytes > 4) || (numTrytes < 0))
    {
-      std::cerr << __PRETTY_FUNC__ << ": Trying to store data of unsupported tryte size " << numTrytes << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported store size " + std::to_string(numTrytes));
    }
 
    if(address < static_cast<std::int32_t>(getInstructionsSizeTrytes()))

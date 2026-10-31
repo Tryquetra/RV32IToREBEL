@@ -4,6 +4,7 @@
 
 #include <regex>
 #include <iostream>
+#include <errors.h>
 
 // Define taken from https://github.com/riscv-software-src/riscv-tests/tree/master/isa/macros/scalar/test_macros.h
 //#define PARSEUTILS_SEXT_IMM(imm, bits) ((imm) | (-(((imm) >> (bits - 1)) & 1) << (bits - 1)))
@@ -49,8 +50,7 @@ bool ParseUtils::parseAssemblerModifierRs(const std::string& in, ASSEMBLER_MODIF
       else if(modifier == "%lo") type = ASSEMBLER_MODIFIER::LO;
       else
       {
-         std::cerr << __PRETTY_FUNC__ << ": Unsupported assembler modifier " << modifier << std::endl;
-         abort();
+         throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported assembler modifier " + modifier);
       }
    }
 

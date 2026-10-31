@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "lexer.h"
 #include "Expressions/all_expressions.h"
+#include <errors.h>
 
 Parser::Parser(Lexer* l)
    : m_l(l)
@@ -36,8 +37,8 @@ void Parser::match(TokenType type)
 {
    if(!checkToken(type))
    {
-      std::cout << "Expected " << TokenTypeStrings[static_cast<int>(type)] << " but found " << m_token->literal << ".\n";
-      abort();
+      throw RebelError("expected " + std::string(TokenTypeStrings[static_cast<int>(type)])
+                       + " but found \"" + m_token->literal + "\"");
    }
    nextToken();
 }

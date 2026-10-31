@@ -6,6 +6,7 @@
 #include <Translators/rv32itorebel6.h>
 #include <Expressions/all_expressions.h>
 #include <logger.h>
+#include <errors.h>
 
 #include <iostream>
 #include <fstream>
@@ -56,8 +57,8 @@ void Assembler::run()
          handleRoDataSection(expr);
          break;
       default:
-         std::cerr << __PRETTY_FUNC__ << ": Unknown section type " << static_cast<std::int32_t>(m_sectionType) << std::endl;
-         abort();
+         throw RebelError(std::string(__PRETTY_FUNC__) + ": unknown section type "
+                          + std::to_string(static_cast<std::int32_t>(m_sectionType)));
          break;
       }
 
@@ -144,8 +145,7 @@ void Assembler::handleDataSection(const Expressions::Expression* expr)
          break;
       }
       case Expressions::Expression::ExpressionType::INSTRUCTION:
-         std::cerr << __PRETTY_FUNC__ << ": Found instruction \"" << *expr << "\" in data section" << std::endl;
-         abort();
+         throw RebelError(std::string(__PRETTY_FUNC__) + ": instruction in data section: " + toText(*expr));
          break;
 
       default:
@@ -182,8 +182,7 @@ void Assembler::handleBssSection(const Expressions::Expression* expr)
          break;
       }
       case Expressions::Expression::ExpressionType::INSTRUCTION:
-         std::cerr << __PRETTY_FUNC__ << ": Found instruction \"" << *expr << "\" in bss section" << std::endl;
-         abort();
+         throw RebelError(std::string(__PRETTY_FUNC__) + ": instruction in bss section: " + toText(*expr));
          break;
       default:
          // Don't care
@@ -219,8 +218,7 @@ void Assembler::handleRoDataSection(const Expressions::Expression* expr)
          break;
       }
       case Expressions::Expression::ExpressionType::INSTRUCTION:
-         std::cerr << __PRETTY_FUNC__ << ": Found instruction \"" << *expr << "\" in rodata section" << std::endl;
-         abort();
+         throw RebelError(std::string(__PRETTY_FUNC__) + ": instruction in rodata section: " + toText(*expr));
          break;
       default:
          // Don't care
@@ -244,8 +242,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       // 7.5 .ascii "string"…
       // .ascii expects zero or more string literals (see Strings) separated by commas. It assembles each string (with no automatic trailing zero byte) into consecutive addresses.
 
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
    else if(name == ".asciz") // 8 bits per letter, + terminating zero which is also 8 bits
    {
@@ -253,8 +250,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       // .asciz is just like .ascii, but each string is followed by a zero byte. The “z” in ‘.asciz’ stands for “zero”.
       // Note that multiple string arguments not separated by commas will be concatenated together and only one final zero byte will be stored.
 
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
    else if(name == ".byte") // 8 bits
    {
@@ -294,16 +290,14 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       // Note - this directive is not intended for encoding instructions, and it will not trigger effects like DWARF line number generation.
       // Instead some targets support special directives for encoding arbitrary binary sequences as instructions such as eg .insn or .inst.
 
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
    else if(name == ".long") // 32 bits according to ABI
    {
       // 7.62 .long expressions
       // .long is the same as ‘.int’. See .int.
 
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
    else if(name == ".short") // 16 bits according to ABI
    {
@@ -315,8 +309,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       // Note - this directive is not intended for encoding instructions, and it will not trigger effects like DWARF line number generation.
       // Instead some targets support special directives for encoding arbitrary binary sequences as instructions such as .insn or .inst.
 
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
    /*else if(name == ".size") // Currenly not supported, but is normally generated by GCC. It's relevance, however, is unknown.
    {
@@ -327,8 +320,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       // 7.90 .skip size [,fill]
       // This directive emits size bytes, each of value fill. Both size and fill are absolute expressions. If the comma and fill are omitted, fill is assumed to be zero. This is the same as ‘.space’.
 
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
    else if(name == ".space")
    {
@@ -336,8 +328,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       // This directive emits size bytes, each of value fill. Both size and fill are absolute expressions. If the comma and fill are omitted, fill is assumed to be zero. This is the same as ‘.skip’.
 
 
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
    else if(name == ".string") // 8 bits per letter, + terminating zero which is also 8 bits
    {
@@ -443,8 +434,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
    }
    else if((name == ".2byte") || (name == ".4byte") || (name == ".8byte") || (name == ".string8") || (name == ".string16") || (name == ".string32"))
    {
-      std::cout << __PRETTY_FUNC__ << ": Unsupported directive object type: " << name << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported directive: " + name);
    }
 
    // TERNARY
@@ -551,8 +541,7 @@ void Assembler::resolveUnresolvedHeapData()
       }
       catch(std::exception&)
       {
-         std::cerr << __PRETTY_FUNC__ << ": Failed to resolve label " << item.label << std::endl;
-         abort();
+         throw RebelError(std::string(__PRETTY_FUNC__) + ": failed to resolve label " + item.label);
       }
    }
 }
@@ -566,8 +555,7 @@ std::int32_t Assembler::resolveAssemblerModifier(const ParseUtils::ASSEMBLER_MOD
    }
    catch(std::exception&)
    {
-      std::cerr << __PRETTY_FUNC__ << ": Failed to load symbol address of symbol " << imm << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": failed to load symbol address of " + imm);
    }
 
    switch(modifier)
@@ -576,8 +564,8 @@ std::int32_t Assembler::resolveAssemblerModifier(const ParseUtils::ASSEMBLER_MOD
       immi = immi - pc;
       break;
    default:
-      std::cout << __PRETTY_FUNC__ << "Received unexpected assembler modifier " << static_cast<int>(modifier) << std::endl;
-      abort();
+      throw RebelError(std::string(__PRETTY_FUNC__) + ": unexpected assembler modifier "
+                       + std::to_string(static_cast<int>(modifier)));
       break;
    }
 
@@ -631,12 +619,10 @@ void Assembler::printExpressionsToFile(const std::string& fileName)
          //std::cout << expr;
          break;
       case Expressions::Expression::ExpressionType::UNDEFINED:
-         std::cerr << "Found undefined expression: " << expr << std::endl;
-         abort();
+         throw RebelError(std::string("found undefined expression: ") + toText(*expr));
          break;
       default:
-         std::cerr << "Unsupported expression type with value = " << static_cast<std::int32_t>(expr->getExpressionType()) << std::endl;
-         abort();
+         throw RebelError("unsupported expression type " + std::to_string(static_cast<std::int32_t>(expr->getExpressionType())));
          break;
       }
 

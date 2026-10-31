@@ -8,6 +8,7 @@
 #include <logger.h>
 
 #include <iostream>
+#include <errors.h>
 
 namespace
 {
@@ -50,8 +51,7 @@ void Translator::Translate(const std::string& targetISAName, const Expressions::
    }
    else
    {
-      std::cerr << __PRETTY_FUNC__ << "Trying to translate unsupported ISA named " << targetISAName << std::endl;
-      abort();
+      throw RebelError("unsupported target ISA: " + targetISAName);
    }
 
    const Expressions::Expression* expr = parser.nextExpression();

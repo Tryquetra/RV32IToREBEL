@@ -20,13 +20,30 @@
 #include <fstream>
 #include <filesystem>
 
+#include <errors.h>
+
+
+int run(int argc, char* argv[]);
 
 int main(int argc, char* argv[])
 {
+   try
+   {
+      return run(argc, argv);
+   }
+   catch(const std::exception& error)
+   {
+      std::cerr << "error: " << error.what() << std::endl;
+      return 2;
+   }
+}
+
+int run(int argc, char* argv[])
+{
    if(argc != 2)
    {
-      std::cout << "Needs one file path." << std::endl;
-      return -1;
+      std::cerr << "usage: RV32IToREBEL <file.s>" << std::endl;
+      return 2;
    }
 
    std::string inputPath = argv[1];
@@ -34,8 +51,7 @@ int main(int argc, char* argv[])
    std::ifstream inFile(inputPath);
    if(!inFile)
    {
-      std::cout << "Failed to open file " << inputPath << std::endl;
-      abort();
+      throw RebelError("cannot open " + inputPath);
    }
    std::string source((std::istreambuf_iterator<char>(inFile)), std::istreambuf_iterator<char>());
    source += '\n';
