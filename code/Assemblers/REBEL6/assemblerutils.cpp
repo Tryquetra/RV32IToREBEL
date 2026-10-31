@@ -114,6 +114,23 @@ namespace Assemblers
 {
 namespace REBEL6
 {
+std::uint8_t AssemblerUtils::immediateWidthTrits(InstructionType type)
+{
+   switch(type)
+   {
+   case InstructionType::IMMEDIATE:
+   case InstructionType::BRANCH:
+   case InstructionType::LOAD:
+   case InstructionType::STORE:
+      return 12;
+   case InstructionType::JUMP:
+   case InstructionType::LOAD_IMMEDIATE:
+      return 24;
+   default:
+      return 0;
+   }
+}
+
 AssemblerUtils::InstructionType AssemblerUtils::getInstructionType(const std::string& instructionName)
 {
    InstructionType retVal;

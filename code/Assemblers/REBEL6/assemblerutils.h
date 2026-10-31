@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace Assemblers
@@ -17,6 +18,8 @@ class AssemblerUtils
    AssemblerUtils() = delete;
 
    static InstructionType getInstructionType(const std::string& instructionName);
+   // Width of the immediate field in trits for this instruction type, 0 when it has none.
+   static std::uint8_t immediateWidthTrits(InstructionType type);
    static void generateAssemblyFileForMRCS(const ExecutableProgram& program, const std::string& fileName);
 
 };

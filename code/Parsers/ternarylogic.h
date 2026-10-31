@@ -18,5 +18,6 @@ public:
   static void tintToTrits(Tint in, Trits &out);
   static void tritsToTint(const Trits &in, Tint &out);
 
-  static void parseImmediate(std::uint8_t immediateSizeTrits, const Tint &in, Tint &out);
+  // Truncates to the field width and returns false when the value did not fit.
+  static bool parseImmediate(std::uint8_t immediateSizeTrits, const Tint &in, Tint &out);
 };

@@ -55,10 +55,12 @@ void TernaryLogic::tritsToTint(const Trits& in, Tint& out)
    }
 }
 
-void TernaryLogic::parseImmediate(uint8_t immediateSizeTrits, const Tint& in, Tint& out)
+bool TernaryLogic::parseImmediate(uint8_t immediateSizeTrits, const Tint& in, Tint& out)
 {
    Trits trits;
    tintToTrits(in, trits);
+   const bool fits = trits.size() <= immediateSizeTrits;
    trits.resize(immediateSizeTrits, 0);
    tritsToTint(trits, out);
+   return fits;
 }

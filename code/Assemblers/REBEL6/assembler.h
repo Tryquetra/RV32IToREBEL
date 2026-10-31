@@ -5,6 +5,7 @@
 #include <Parsers/parseutils.h>
 #include <Parsers/ternarylogic.h>
 #include <Assemblers/directivehelper.h>
+#include <Assemblers/REBEL6/assemblerutils.h>
 
 #include <vector>
 #include <map>
@@ -36,6 +37,7 @@ private:
   bool resolveIfObject(const Expressions::Directive* directive, std::uint8_t& tryteSizePerElement, std::vector<Tint>& values);
 
   void resolveOperands();
+  void checkImmediateRange(const Expressions::Instruction& instr, AssemblerUtils::InstructionType type);
   void resolveUnresolvedHeapData();
   std::int32_t resolveAssemblerModifier(const ParseUtils::ASSEMBLER_MODIFIER& modifier, const std::string& imm, std::int32_t pc);
 

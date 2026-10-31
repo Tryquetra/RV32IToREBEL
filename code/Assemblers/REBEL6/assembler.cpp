@@ -10,7 +10,44 @@
 
 #include <iostream>
 #include <fstream>
+#include <cerrno>
+#include <cstdlib>
 #include <math.h>
+
+namespace
+{
+bool parsePlainInteger(const std::string& text, std::int64_t& out)
+{
+   if(text.empty())
+   {
+      return false;
+   }
+   char* end = nullptr;
+   errno = 0;
+   const long long value = std::strtoll(text.c_str(), &end, 0);
+   if((end == text.c_str()) || (*end != '\0') || (errno == ERANGE))
+   {
+      return false;
+   }
+   out = value;
+   return true;
+}
+
+void checkDataValue(const std::string& text, unsigned bits, SourceLocation location)
+{
+   std::int64_t value = 0;
+   if(!parsePlainInteger(text, value))
+   {
+      return; // A symbol; relocations handle it.
+   }
+   const std::int64_t min = -(static_cast<std::int64_t>(1) << (bits - 1));
+   const std::int64_t max = (static_cast<std::int64_t>(1) << bits) - 1;
+   if((value < min) || (value > max))
+   {
+      throw RebelError("value " + text + " does not fit " + std::to_string(bits) + " bits", location);
+   }
+}
+}
 
 namespace Assemblers
 {
@@ -263,6 +300,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       tryteSizePerElement = 1;
       for(const std::string& str: parameters)
       {
+         checkDataValue(str, 8, directive->getLocation());
          ParseUtils::parseImmediate(8, str, value);
          values.push_back(value);
       }
@@ -276,6 +314,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       tryteSizePerElement = 1;
       for(const std::string& str: parameters)
       {
+         checkDataValue(str, 16, directive->getLocation());
          ParseUtils::parseImmediate(16, str, value);
          values.push_back(value        & 0xFF);
          values.push_back((value >> 8) & 0xFF);
@@ -378,7 +417,13 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       {
          // Can refer to labels. In such cases, remember this and resolve the .word value once we know the value of the label.
          // Still allocate space on the heap.
-         if(!ParseUtils::parseImmediate(32, str, value))
+         std::int64_t parsed = 0;
+         if(parsePlainInteger(str, parsed))
+         {
+            checkDataValue(str, 32, directive->getLocation());
+            value = static_cast<std::int32_t>(parsed);
+         }
+         else
          {
             value = 0;
             m_heapRelocations.push_back(RelocationItem(addr, 4, str, true));
@@ -427,7 +472,13 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       value = 0;
       if(parameters.size() == 2)
       {
-         value = ParseUtils::parseImmediate(tryteSizePerElement * 8, parameters[1], value);
+         checkDataValue(parameters[1], tryteSizePerElement * 8, directive->getLocation());
+         std::int32_t fill = 0;
+         if(!ParseUtils::parseImmediate(tryteSizePerElement * 8, parameters[1], fill))
+         {
+            throw RebelError("invalid fill value " + parameters[1], directive->getLocation());
+         }
+         value = fill;
       }
 
       values.resize(numElements, value);
@@ -507,13 +558,65 @@ void Assembler::resolveOperands()
       AssemblerUtils::InstructionType instrType = AssemblerUtils::getInstructionType(instr->getInstructionName());
       if((instrType == AssemblerUtils::InstructionType::BRANCH) || (instrType == AssemblerUtils::InstructionType::JUMP))
       {
-         std::int32_t opInt = stoi(operands.back());
+         std::int32_t opInt = 0;
+         try
+         {
+            opInt = stoi(operands.back());
+         }
+         catch(const std::exception&)
+         {
+            throw RebelError("unresolved branch target \"" + operands.back() + "\"", instr->getLocation());
+         }
          opInt = opInt - pc;
          operands.back() = std::to_string(opInt);
       }
 
+      checkImmediateRange(*instr, instrType);
+
       pc += instrSize;
       instr = m_executable.loadInstruction(pc, instrSize);
+   }
+}
+
+void Assembler::checkImmediateRange(const Expressions::Instruction& instr, AssemblerUtils::InstructionType type)
+{
+   const std::uint8_t width = AssemblerUtils::immediateWidthTrits(type);
+   if(width == 0)
+   {
+      return;
+   }
+
+   const std::vector<std::string>& operands = instr.getInstructionOperands();
+   std::string text;
+   if((type == AssemblerUtils::InstructionType::LOAD) || (type == AssemblerUtils::InstructionType::STORE))
+   {
+      std::string offset;
+      std::string rs;
+      if((operands.size() < 2) || !ParseUtils::parseRegisterOffset(operands[1], offset, rs))
+      {
+         return;
+      }
+      text = offset;
+   }
+   else
+   {
+      if(operands.empty())
+      {
+         return;
+      }
+      text = operands.back();
+   }
+
+   std::int64_t value = 0;
+   if(!parsePlainInteger(text, value))
+   {
+      return; // Symbol or register, checked elsewhere.
+   }
+
+   Tint truncated = 0;
+   if(!TernaryLogic::parseImmediate(width, value, truncated))
+   {
+      throw RebelError("immediate " + text + " does not fit " + std::to_string(width) + " trits", instr.getLocation());
    }
 }
 
