@@ -1,3 +1,4 @@
+#include "Encoder/encoder.h"
 #include "Linker/linker.h"
 #include "Linker/unit.h"
 
@@ -32,6 +33,7 @@ struct Options
    std::string target = "rebel-6";
    std::uint32_t memory = 0;
    bool emitObject = false;
+   bool emitImage = false;
    bool link = false;
 };
 
@@ -59,6 +61,10 @@ Options parseOptions(int argc, char* argv[])
       {
          options.emitObject = true;
       }
+      else if(arg == "--emit-image")
+      {
+         options.emitImage = true;
+      }
       else if(arg == "--link")
       {
          options.link = true;
@@ -85,6 +91,7 @@ Options parseOptions(int argc, char* argv[])
                       "  -o, --output <path>   output name (without extension)\n"
                       "  --link                link several units into one image\n"
                       "  --emit-obj            write a .mto object per input\n"
+                      "  --emit-image          write an R6IM image next to the .tas\n"
                       "  --target <isa>        translation target (rebel-6)\n"
                       "  --memory <trytes>     heap limit, default 8 MiB\n";
          std::exit(0);
@@ -201,7 +208,7 @@ std::vector<std::string> collectRelocations(const Linker::Unit& unit)
 }
 
 AssemblyResult assemble(Expressions::ExpressionList& expressions, const std::string& base, bool writeTas,
-                        std::uint32_t memory)
+                        std::uint32_t memory, bool writeImage)
 {
    Assemblers::REBEL6::ExecutableProgram program;
    if(memory != 0)
@@ -215,6 +222,31 @@ AssemblyResult assemble(Expressions::ExpressionList& expressions, const std::str
    }
    assembler.init();
    assembler.run();
+
+   if(writeImage)
+   {
+      std::int64_t entry = 0;
+      try
+      {
+         entry = program.loadSymbolAddress("main");
+      }
+      catch(const std::exception&)
+      {
+         try
+         {
+            entry = program.loadSymbolAddress("_start");
+         }
+         catch(const std::exception&)
+         {
+            entry = 0;
+         }
+      }
+      std::string error;
+      if(!Encoder::writeImage(base + ".img", program, entry, error))
+      {
+         throw RebelError(error);
+      }
+   }
 
    AssemblyResult result;
    result.symbols = program.getSymbols();
@@ -241,7 +273,7 @@ int linkUnits(const Options& options)
 
    Expressions::ExpressionList merged = Linker::link(units);
    const std::string base = options.output.empty() ? "linked" : options.output;
-   assemble(merged, base, true, options.memory);
+   assemble(merged, base, true, options.memory, options.emitImage);
    return 0;
 }
 
@@ -255,7 +287,7 @@ int singleUnit(const Options& options)
    {
       Linker::Unit unit = Linker::Unit::fromObject(stem, source);
       Expressions::ExpressionList& expressions = unit.getExpressions();
-      assemble(expressions, options.output.empty() ? stem : options.output, true, options.memory);
+      assemble(expressions, options.output.empty() ? stem : options.output, true, options.memory, options.emitImage);
       return 0;
    }
 
@@ -263,7 +295,7 @@ int singleUnit(const Options& options)
    {
       Linker::Unit unit = Linker::Unit::fromAssembly(stem, source);
       const std::vector<std::string> relocations = collectRelocations(unit);
-      AssemblyResult result = assemble(unit.getExpressions(), stem, false, options.memory);
+      AssemblyResult result = assemble(unit.getExpressions(), stem, false, options.memory, options.emitImage);
       unit.writeObject(stem + ".mto", result.symbols, relocations, result.bss);
       return 0;
    }
@@ -281,7 +313,7 @@ int singleUnit(const Options& options)
       delete expr;
    }
 
-   assemble(translated, options.output.empty() ? stem : options.output, true, options.memory);
+   assemble(translated, options.output.empty() ? stem : options.output, true, options.memory, options.emitImage);
    return 0;
 }
 

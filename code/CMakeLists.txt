@@ -27,6 +27,7 @@ set(HEADERS
    Translators/rv32itorebel6.h
    Linker/unit.h
    Linker/linker.h
+   Encoder/encoder.h
    Expressions/all_expressions.h
    Expressions/directive.h
    Expressions/expression.h
@@ -65,6 +66,7 @@ set(SOURCES
    Translators/rv32itorebel6.cpp
    Linker/unit.cpp
    Linker/linker.cpp
+   Encoder/encoder.cpp
    Expressions/directive.cpp
    Expressions/instruction.cpp
    Expressions/label.cpp
