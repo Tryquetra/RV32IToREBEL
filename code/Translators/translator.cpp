@@ -74,7 +74,16 @@ void Translator::Translate(const std::string& targetISAName, const Expressions::
       case Expressions::Expression::ExpressionType::INSTRUCTION:
       {
          const Expressions::Instruction* instr = static_cast<const Expressions::Instruction*>(expr);
+         const auto lastOld = to.empty() ? to.end() : std::prev(to.end());
          resolveInstruction(instr, to, *translator);
+         // Generated instructions inherit the source position of the instruction they came from.
+         for(auto it = (lastOld == to.end()) ? to.begin() : std::next(lastOld); it != to.end(); ++it)
+         {
+            if((*it)->getLocation().line == 0)
+            {
+               (*it)->setLocation(instr->getLocation());
+            }
+         }
          break;
       }
       case Expressions::Expression::ExpressionType::COMMENT:

@@ -50,7 +50,7 @@ bool ParseUtils::parseAssemblerModifierRs(const std::string& in, ASSEMBLER_MODIF
       else if(modifier == "%lo") type = ASSEMBLER_MODIFIER::LO;
       else
       {
-         throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported assembler modifier " + modifier);
+         throw RebelError("unsupported assembler modifier " + modifier);
       }
    }
 

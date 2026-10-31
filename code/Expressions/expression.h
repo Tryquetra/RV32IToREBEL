@@ -2,6 +2,9 @@
 
 #include <string>
 #include <list>
+#include <sstream>
+
+#include <errors.h>
 
 namespace Expressions
 {
@@ -17,7 +20,18 @@ public:
    virtual ExpressionType getExpressionType() const = 0;
    virtual std::ostream& printToStream(std::ostream& stream) const = 0;
 
+   std::string toString() const
+   {
+      std::ostringstream stream;
+      printToStream(stream);
+      return stream.str();
+   }
+
+   SourceLocation getLocation() const { return m_location; }
+   void setLocation(const SourceLocation& location) { m_location = location; }
+
 protected:
+   SourceLocation m_location;
 };
 
 

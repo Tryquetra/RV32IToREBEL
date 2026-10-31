@@ -5,9 +5,10 @@
 namespace Expressions
 {
 
-Directive::Directive(const std::string& directiveName, const std::vector<std::string>& directiveParameters)
+Directive::Directive(const std::string& directiveName, const std::vector<std::string>& directiveParameters, SourceLocation location)
     : m_parameters(directiveParameters)
 {
+   m_location = location;
    m_name.resize(directiveName.length());
    std::transform(directiveName.begin(), directiveName.end(), m_name.begin(), [](std::uint8_t c){ return std::tolower(c); });
 }

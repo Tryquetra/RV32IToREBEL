@@ -5,9 +5,10 @@
 namespace Expressions
 {
 
-Instruction::Instruction(const std::string& instructionName, const std::vector<std::string>& instructionOperands)
+Instruction::Instruction(const std::string& instructionName, const std::vector<std::string>& instructionOperands, SourceLocation location)
     : m_operands(instructionOperands)
 {
+   m_location = location;
    m_name.resize(instructionName.length());
    std::transform(instructionName.begin(), instructionName.end(), m_name.begin(), [](std::uint8_t c){ return std::tolower(c); });
 }

@@ -38,7 +38,8 @@ void Parser::match(TokenType type)
    if(!checkToken(type))
    {
       throw RebelError("expected " + std::string(TokenTypeStrings[static_cast<int>(type)])
-                       + " but found \"" + m_token->literal + "\"");
+                       + " but found \"" + m_token->literal + "\"",
+                       {m_token->line, m_token->column});
    }
    nextToken();
 }
@@ -95,7 +96,7 @@ Expressions::Label* Parser::getLabel(bool includeDot)
    }
    labelName += m_token->literal;
 
-   Expressions::Label* l = new Expressions::Label(labelName);
+   Expressions::Label* l = new Expressions::Label(labelName, {m_token->line, m_token->column});
 
    match(TokenType::Symbol);
    nextToken(); // Bypass the colon
@@ -105,6 +106,7 @@ Expressions::Label* Parser::getLabel(bool includeDot)
 
 Expressions::Directive* Parser::getDirective(bool includeDot)
 {
+   const SourceLocation location{m_token->line, m_token->column};
    std::string directiveName;
 
    if(checkToken(TokenType::Dot))
@@ -139,7 +141,7 @@ Expressions::Directive* Parser::getDirective(bool includeDot)
       }
    }
 
-   return new Expressions::Directive(directiveName, operands);
+   return new Expressions::Directive(directiveName, operands, location);
 ;
 }
 
@@ -167,6 +169,7 @@ Expressions::Instruction* Parser::getInstruction()
 {
    Expressions::Instruction* instr = nullptr;
 
+   const SourceLocation location{m_token->line, m_token->column};
    const std::string instructionName = m_token->literal;
    nextToken();
 
@@ -188,7 +191,7 @@ Expressions::Instruction* Parser::getInstruction()
       }
    }
 
-   instr = new Expressions::Instruction(instructionName, operands);
+   instr = new Expressions::Instruction(instructionName, operands, location);
 
    return instr;
 }

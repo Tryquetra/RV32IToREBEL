@@ -24,6 +24,8 @@ static const char* const TokenTypeStrings[] = {"Symbol", "Left-Parenthesis", "Ri
 class Token
 {
 public:
-   TokenType type;
+   TokenType type = TokenType::Symbol;
    std::string literal;
+   int line = 0;
+   int column = 0;
 };

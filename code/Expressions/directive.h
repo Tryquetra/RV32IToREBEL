@@ -10,7 +10,7 @@ class Directive : public Expression
 {
 public:
 
-   Directive(const std::string& directiveName, const std::vector<std::string>& directiveParameters);
+   Directive(const std::string& directiveName, const std::vector<std::string>& directiveParameters, SourceLocation location = {});
    virtual ~Directive() = default;
 
    virtual ExpressionType getExpressionType() const;

@@ -53,7 +53,7 @@ void ExecutableProgram::addToHeap(const Tint& value, std::uint8_t numTrytes)
 {
    if((numTrytes > 4) || (numTrytes < 0))
    {
-      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported store size " + std::to_string(numTrytes));
+      throw RebelError("unsupported store size " + std::to_string(numTrytes));
    }
 
    doStoreToHeap(m_heapSizeTrytes, value, numTrytes);
@@ -106,7 +106,7 @@ void ExecutableProgram::loadFromHeap(std::int32_t address, std::uint8_t numTryte
 {
    if((numTrytes > 4) || (numTrytes < 0))
    {
-      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported load size " + std::to_string(numTrytes));
+      throw RebelError("unsupported load size " + std::to_string(numTrytes));
    }
 
    if(address < static_cast<std::int32_t>(getInstructionsSizeTrytes()))
@@ -153,7 +153,7 @@ void ExecutableProgram::storeToHeap(std::int32_t address, const Tint& value, std
 {
    if((numTrytes > 4) || (numTrytes < 0))
    {
-      throw RebelError(std::string(__PRETTY_FUNC__) + ": unsupported store size " + std::to_string(numTrytes));
+      throw RebelError("unsupported store size " + std::to_string(numTrytes));
    }
 
    if(address < static_cast<std::int32_t>(getInstructionsSizeTrytes()))

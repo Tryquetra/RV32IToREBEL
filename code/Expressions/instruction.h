@@ -9,7 +9,7 @@ namespace Expressions
 class Instruction : public Expression
 {
 public:
-   Instruction(const std::string& instructionName, const std::vector<std::string>& instructionOperands);
+   Instruction(const std::string& instructionName, const std::vector<std::string>& instructionOperands, SourceLocation location = {});
    virtual ~Instruction() = default;
 
    virtual ExpressionType getExpressionType() const;

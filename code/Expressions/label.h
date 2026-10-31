@@ -8,7 +8,7 @@ class Label : public Expression
 {
 public:
 
-   Label(const std::string& labelName);
+   Label(const std::string& labelName, SourceLocation location = {});
    virtual ~Label() = default;
 
    virtual ExpressionType getExpressionType() const;

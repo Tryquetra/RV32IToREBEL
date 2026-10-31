@@ -4,9 +4,10 @@
 
 namespace Expressions
 {
-Label::Label(const std::string& labelName)
+Label::Label(const std::string& labelName, SourceLocation location)
     :m_name(labelName)
 {
+   m_location = location;
 }
 
 Expression::ExpressionType Label::getExpressionType() const

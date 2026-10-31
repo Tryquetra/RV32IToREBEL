@@ -15,6 +15,8 @@ private:
    const std::string& m_source;
    char m_ch; // Current character.
    int m_pos; // Position of next character to be read.
+   int m_line; // Line of the current character, 1 based.
+   int m_column; // Column of the current character, 1 based.
    void nextChar();
    char peekChar();
    bool isPunct();

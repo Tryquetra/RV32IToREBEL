@@ -8,13 +8,26 @@
 
 Lexer::Lexer(const std::string& source)
    : m_source(source)
+   , m_ch(0)
    , m_pos(0)
+   , m_line(1)
+   , m_column(1)
 {
    nextChar(); // Initialize lexer with first character.
 }
 
 void Lexer::nextChar()
 {
+   if(m_ch == '\n')
+   {
+      ++m_line;
+      m_column = 1;
+   }
+   else if((m_ch != 0) && (m_ch != EOFConstant))
+   {
+      ++m_column;
+   }
+
    if(m_pos >= m_source.length())
    {
       m_ch = EOFConstant;
@@ -39,6 +52,8 @@ Token* Lexer::nextToken()
 {
    Token *t = new Token();
    skipSpaces();
+   t->line = m_line;
+   t->column = m_column;
    t->literal = std::string(1, m_ch);
 
    switch(m_ch)
