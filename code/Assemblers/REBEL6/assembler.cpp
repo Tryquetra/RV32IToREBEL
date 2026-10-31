@@ -360,11 +360,16 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
       tryteSizePerElement = 1;
       for(const std::string& param: parameters)
       {
-         for(int i = 0; i <= param.size(); ++i) // Include terminating zero
+         std::string str = param;
+         if(str.size() >= 2 && str.front() == '"' && str.back() == '"')
          {
-            ParseUtils::parseImmediate(8, param.c_str()[i], value);
+            str = str.substr(1, str.size() - 2);
+         }
+         for(int i = 0; i <= static_cast<int>(str.size()); ++i) // Include terminating zero
+         {
+            ParseUtils::parseImmediate(8, str.c_str()[i], value);
             values.push_back(value);
-            // std::cout << "Letter = " << param.c_str()[i] << "; value = " << value << std::endl;
+            // std::cout << "Letter = " << str.c_str()[i] << "; value = " << value << std::endl;
          }
       }
    }

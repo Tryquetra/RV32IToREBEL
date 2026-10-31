@@ -101,17 +101,24 @@ void ExecutableProgram::loadFromHeap(std::int32_t address, std::uint8_t numTryte
 
 std::int32_t ExecutableProgram::loadSymbolAddress(const std::string& symbolName) const
 {
-   std::int32_t retVal = 0;
    try
    {
-      retVal = m_symbolTable.at(symbolName);
+      return m_symbolTable.at(symbolName);
    }
    catch(std::exception&)
    {
-      throw;
+      // Fall through to symbol+addend parsing.
    }
 
-   return retVal;
+   const std::size_t pos = symbolName.find_last_of("+-");
+   if(pos != std::string::npos && pos > 0)
+   {
+      const std::int32_t base = loadSymbolAddress(symbolName.substr(0, pos));
+      const std::int32_t addend = std::stoi(symbolName.substr(pos));
+      return base + addend;
+   }
+
+   throw std::out_of_range("symbol not found: " + symbolName);
 }
 
 void ExecutableProgram::storeToHeap(std::int32_t address, const Tint& value, std::uint8_t numTrytes)

@@ -60,27 +60,6 @@ int main(int argc, char* argv[])
     * ------------------- BACKEND -------------------
     */
 
-   // ------------ RV32I------------
-
-   // Translation
-   Expressions::ExpressionList rv32iExpressions;
-   Translators::Translator::Translate("rv32i", sourceExpressions, rv32iExpressions);
-
-   // Assembling
-   Assemblers::RV32I::ExecutableProgram rv32iExecutable;
-   Assemblers::RV32I::Assembler rv32iAssembler(rv32iExpressions, rv32iExecutable);
-
-   // Generate binary assembly file
-   std::string fileName = std::filesystem::path(inputPath).stem();
-   rv32iAssembler.printExpressionsToFile(fileName);
-
-   // Run assembler
-   rv32iAssembler.init();
-   rv32iAssembler.run();
-
-   // Generate MRSC binary object file.
-   Assemblers::RV32I::AssemblerUtils::generateAssemblyFileForMRCS(rv32iExecutable, fileName);
-
    // ------------ REBEL-6 ------------
 
    // Translation
@@ -91,6 +70,8 @@ int main(int argc, char* argv[])
    Assemblers::REBEL6::ExecutableProgram rebel6Executable;
    Assemblers::REBEL6::Assembler rebel6Assembler(rebel6Expressions, rebel6Executable);
 
+   std::string fileName = std::filesystem::path(inputPath).stem();
+
    // Generate ternary assembly file
    rebel6Assembler.printExpressionsToFile(fileName);
 
@@ -98,34 +79,5 @@ int main(int argc, char* argv[])
    rebel6Assembler.init();
    rebel6Assembler.run();
 
-   // Generate MRCS ternary file
-   //Simulators::REBEL6::AssemblerUtils::generateAssemblyFileForMRCS(rebel6Executable, fileName);
-
-   /*
-    * ------------------ SIMULATION ------------------
-    */
-
-   // ------------ RV32I------------
-
-   // Simulation
-   std::cout << "RV32I SIMULATION" << std::endl;
-   Simulators::RV32I::Simulator rv32iSim;
-   rv32iSim.run(rv32iExecutable);
-
-   // ------------ REBEL-6 ------------
-   // Simulation
-   std::cout << "REBEL-6 SIMULATION" << std::endl;
-   Simulators::REBEL6::Simulator rebel6Sim;
-   rebel6Sim.run(rebel6Executable);
-
-   /*
-    * ------------------ BENCHMARKS ------------------
-    */
-   std::cout << "RV32I: Instructions ran count = " << rv32iSim.getNumberOfRanInstructions() << "; bitflip count when writing to registers = " << rv32iSim.getNumberOfBitFlips() << std::endl;
-   std::cout << "REBEL-6: Instructions ran count = " << rebel6Sim.getNumberOfRanInstructions() << "; tritflip count when writing to registers = " << rebel6Sim.getNumberOfTritFlips() << std::endl;
-
-   // Cleanup
-   sourceExpressions.remove_if([](const Expressions::Expression* expr) { delete expr; return true;});
-   delete l;
    return 0;
 }

@@ -205,6 +205,14 @@ void Parser::getOperand(std::string& operand) {
    {
       operand += m_token->literal;
       nextToken();
+      // Optional addend: symbol+4 or symbol-4.
+      while(checkToken(TokenType::Plus) || checkToken(TokenType::Minus))
+      {
+         operand += m_token->literal;
+         nextToken();
+         operand += m_token->literal;
+         nextToken();
+      }
    }
    // symbol '(' symbol ')'
    else
