@@ -33,6 +33,7 @@ private:
   void handleRoDataSection(const Expressions::Expression* expr);
 
   void resolveDataDirective(const Expressions::Directive* directive);
+  bool handleAlignment(const Expressions::Directive* directive, std::int32_t& cursor);
 
   bool resolveIfObject(const Expressions::Directive* directive, std::uint8_t& tryteSizePerElement, std::vector<Tint>& values);
 
@@ -47,8 +48,11 @@ private:
 
   using HeapLabelMap = std::map<std::string, std::int32_t>; // Label | address
   HeapLabelMap m_tempHeapLabels;
+  std::map<std::string, SourceLocation> m_labelLocations;
   std::int32_t m_pc; // Program counter
   std::int32_t m_hc; // Heap counter - used to generate the correct value for labels related to data/bss/rodata objects
+  std::int32_t m_bssSizeTrytes; // .bss is laid out after .data and is not part of the initialized image
+  std::map<std::string, std::int32_t> m_bssLabels; // Label | offset inside .bss
 
   struct RelocationItem
   {

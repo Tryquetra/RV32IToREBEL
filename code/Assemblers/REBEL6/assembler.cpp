@@ -51,7 +51,10 @@ void Assembler::init()
    m_sectionType = DirectiveHelper::SectionType::TEXT;
    m_pc = 0;
    m_hc = 0;
+   m_bssSizeTrytes = 0;
    m_tempHeapLabels.clear();
+   m_bssLabels.clear();
+   m_labelLocations.clear();
    m_heapRelocations.clear();
 }
 
@@ -85,6 +88,8 @@ void Assembler::run()
       expr = m_parser.nextExpression();
    }
 
+   // .bss is not part of the initialized image: reserve its size after .data.
+   m_executable.reserveHeap(m_bssSizeTrytes);
    m_executable.calculateMemorySize();
 
    // Finished setting up the instruction memory, now we need to resolve the heap labels
@@ -93,8 +98,20 @@ void Assembler::run()
 
    while(it != m_tempHeapLabels.end())
    {
-      m_executable.addSymbol(it->first, it->second + instructionsSizeTrytes);
+      if(!m_executable.addSymbol(it->first, it->second + instructionsSizeTrytes))
+      {
+         throw RebelError("duplicate symbol \"" + it->first + "\"", m_labelLocations[it->first]);
+      }
       ++it;
+   }
+
+   const std::int32_t bssBase = m_hc;
+   for(const auto& [name, offset]: m_bssLabels)
+   {
+      if(!m_executable.addSymbol(name, bssBase + offset + instructionsSizeTrytes))
+      {
+         throw RebelError("duplicate symbol \"" + name + "\"", m_labelLocations[name]);
+      }
    }
 
    // Now that we finally know the position of everything we need to resolve the operands
@@ -121,7 +138,10 @@ void Assembler::handleTextSection(const Expressions::Expression* expr)
       case Expressions::Expression::ExpressionType::LABEL:
       {
          const Expressions::Label* label = static_cast<const Expressions::Label*>(expr);
-         m_executable.addSymbol(label->getLabelName(), m_pc);
+         if(!m_executable.addSymbol(label->getLabelName(), m_pc))
+         {
+            throw RebelError("duplicate symbol \"" + label->getLabelName() + "\"", label->getLocation());
+         }
          break;
       }
       case Expressions::Expression::ExpressionType::INSTRUCTION:
@@ -161,7 +181,11 @@ void Assembler::handleDataSection(const Expressions::Expression* expr)
       case Expressions::Expression::ExpressionType::LABEL:
       {
          const Expressions::Label* label = static_cast<const Expressions::Label*>(expr);
-         m_tempHeapLabels.insert({label->getLabelName(), m_hc});
+         if(!m_tempHeapLabels.insert({label->getLabelName(), m_hc}).second)
+         {
+            throw RebelError("duplicate symbol \"" + label->getLabelName() + "\"", label->getLocation());
+         }
+         m_labelLocations[label->getLabelName()] = label->getLocation();
          break;
       }
       case Expressions::Expression::ExpressionType::INSTRUCTION:
@@ -198,7 +222,11 @@ void Assembler::handleBssSection(const Expressions::Expression* expr)
       case Expressions::Expression::ExpressionType::LABEL:
       {
          const Expressions::Label* label = static_cast<const Expressions::Label*>(expr);
-         m_tempHeapLabels.insert({label->getLabelName(), m_hc});
+         if(!m_tempHeapLabels.insert({label->getLabelName(), m_hc}).second)
+         {
+            throw RebelError("duplicate symbol \"" + label->getLabelName() + "\"", label->getLocation());
+         }
+         m_labelLocations[label->getLabelName()] = label->getLocation();
          break;
       }
       case Expressions::Expression::ExpressionType::INSTRUCTION:
@@ -234,7 +262,11 @@ void Assembler::handleRoDataSection(const Expressions::Expression* expr)
       case Expressions::Expression::ExpressionType::LABEL:
       {
          const Expressions::Label* label = static_cast<const Expressions::Label*>(expr);
-         m_tempHeapLabels.insert({label->getLabelName(), m_hc});
+         if(!m_tempHeapLabels.insert({label->getLabelName(), m_hc}).second)
+         {
+            throw RebelError("duplicate symbol \"" + label->getLabelName() + "\"", label->getLocation());
+         }
+         m_labelLocations[label->getLabelName()] = label->getLocation();
          break;
       }
       case Expressions::Expression::ExpressionType::INSTRUCTION:
@@ -675,8 +707,40 @@ std::int32_t Assembler::resolveAssemblerModifier(const ParseUtils::ASSEMBLER_MOD
    return immi;
 }
 
+bool Assembler::handleAlignment(const Expressions::Directive* directive, std::int32_t& cursor)
+{
+   const std::string& name = directive->getDirectiveName();
+   if((name != ".align") && (name != ".p2align") && (name != ".balign"))
+   {
+      return false;
+   }
+
+   const std::vector<std::string>& parameters = directive->getDirectiveParameters();
+   if(parameters.empty())
+   {
+      throw RebelError("directive " + name + " needs a value", directive->getLocation());
+   }
+   std::int64_t value = 0;
+   if(!ParseUtils::parseInteger(parameters[0], value) || (value < 0) || (value > 16))
+   {
+      throw RebelError("invalid alignment \"" + parameters[0] + "\"", directive->getLocation());
+   }
+   const std::uint32_t alignment = (name == ".balign") ? static_cast<std::uint32_t>(value) : (1u << value);
+   while((static_cast<std::uint32_t>(cursor) % std::max<std::uint32_t>(alignment, 1)) != 0)
+   {
+      m_executable.addToHeap(0, 1);
+      ++cursor;
+   }
+   return true;
+}
+
 void Assembler::resolveDataDirective(const Expressions::Directive* directive)
 {
+   if(handleAlignment(directive, m_hc))
+   {
+      return;
+   }
+
    std::uint8_t tryteSizePerElement;
    std::vector<Tint> values;
    if(resolveIfObject(directive, tryteSizePerElement, values))

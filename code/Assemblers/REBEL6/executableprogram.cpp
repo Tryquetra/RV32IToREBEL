@@ -60,9 +60,15 @@ void ExecutableProgram::addToHeap(const Tint& value, std::uint8_t numTrytes)
    m_heapSizeTrytes += numTrytes;
 }
 
-void ExecutableProgram::addSymbol(const std::string& symbolName, std::int32_t address)
+void ExecutableProgram::reserveHeap(std::uint32_t numTrytes)
 {
-   m_symbolTable.insert({symbolName, address});
+   ensureHeapCapacity(m_heapSizeTrytes + numTrytes);
+   m_heapSizeTrytes += numTrytes;
+}
+
+bool ExecutableProgram::addSymbol(const std::string& symbolName, std::int32_t address)
+{
+   return m_symbolTable.insert({symbolName, address}).second;
 }
 
 Expressions::Instruction* ExecutableProgram::loadInstruction(std::int32_t programCounter, std::uint8_t& instructionSize) const

@@ -23,7 +23,10 @@ public:
 
    void addInstruction(Expressions::Instruction* instruction, std::uint8_t instructionSize);
    void addToHeap(const Tint& value, std::uint8_t numTrytes);
-   void addSymbol(const std::string& symbolName, std::int32_t address);
+   // Reserves zero-filled space without writing it, for .bss.
+   void reserveHeap(std::uint32_t numTrytes);
+   // Returns false when the symbol is already defined.
+   bool addSymbol(const std::string& symbolName, std::int32_t address);
 
    Expressions::Instruction* loadInstruction(std::int32_t programCounter, std::uint8_t& instructionSize) const;
    void loadFromHeap(std::int32_t address, std::uint8_t numTrytes, Trytes& out) const;
