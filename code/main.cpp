@@ -47,6 +47,7 @@ struct Options
    bool emitImage = false;
    bool link = false;
    bool check = false;
+   bool noTas = false;
 };
 
 struct AssemblyResult
@@ -80,6 +81,10 @@ Options parseOptions(int argc, char* argv[])
       else if(arg == "--check")
       {
          options.check = true;
+      }
+      else if(arg == "--no-tas")
+      {
+         options.noTas = true;
       }
       else if(arg == "--diff")
       {
@@ -133,6 +138,7 @@ Options parseOptions(int argc, char* argv[])
                       "  --emit-obj            write a .mto object per input\n"
                       "  --emit-image          write an R6IM image next to the .tas\n"
                       "  --check               assemble and validate without writing outputs\n"
+                      "  --no-tas              skip the .tas, for image-only builds\n"
                       "  --run-tests <dir>     assemble and simulate every .s test in the directory\n"
                       "  --diff                run the RV32I and REBEL-6 simulators and compare registers\n"
                       "  --stats <path>        write JSON telemetry for the assembled image\n"
@@ -511,7 +517,7 @@ int linkUnits(const Options& options)
 
    Expressions::ExpressionList merged = Linker::link(units);
    const std::string base = options.output.empty() ? "linked" : options.output;
-   assemble(merged, base, !options.check, options.memory, options.emitImage && !options.check,
+   assemble(merged, base, !options.check && !options.noTas, options.memory, options.emitImage && !options.check,
             options.statsPath, options.simulate);
    if(options.check)
    {
@@ -530,7 +536,7 @@ int singleUnit(const Options& options)
    {
       Linker::Unit unit = Linker::Unit::fromObject(stem, source);
       Expressions::ExpressionList& expressions = unit.getExpressions();
-      assemble(expressions, options.output.empty() ? stem : options.output, !options.check, options.memory,
+      assemble(expressions, options.output.empty() ? stem : options.output, !options.check && !options.noTas, options.memory,
                options.emitImage && !options.check, options.statsPath, options.simulate);
       if(options.check)
       {
@@ -562,7 +568,7 @@ int singleUnit(const Options& options)
       delete expr;
    }
 
-   assemble(translated, options.output.empty() ? stem : options.output, !options.check, options.memory,
+   assemble(translated, options.output.empty() ? stem : options.output, !options.check && !options.noTas, options.memory,
             options.emitImage && !options.check, options.statsPath, options.simulate);
    if(options.check)
    {
