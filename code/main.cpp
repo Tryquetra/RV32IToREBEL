@@ -40,6 +40,8 @@ struct Options
    std::string target = "rebel-6";
    std::uint32_t memory = 0;
    std::string testDir;
+   std::string statsPath;
+   bool simulate = false;
    bool diff = false;
    bool emitObject = false;
    bool emitImage = false;
@@ -83,6 +85,18 @@ Options parseOptions(int argc, char* argv[])
       {
          options.diff = true;
       }
+      else if(arg == "--stats")
+      {
+         if(i + 1 >= argc)
+         {
+            throw RebelError("--stats needs a path");
+         }
+         options.statsPath = argv[++i];
+      }
+      else if(arg == "--simulate")
+      {
+         options.simulate = true;
+      }
       else if(arg == "--run-tests")
       {
          if(i + 1 >= argc)
@@ -121,6 +135,8 @@ Options parseOptions(int argc, char* argv[])
                       "  --check               assemble and validate without writing outputs\n"
                       "  --run-tests <dir>     assemble and simulate every .s test in the directory\n"
                       "  --diff                run the RV32I and REBEL-6 simulators and compare registers\n"
+                      "  --stats <path>        write JSON telemetry for the assembled image\n"
+                      "  --simulate            run the REBEL-6 simulator before writing stats\n"
                       "  --target <isa>        translation target (rebel-6)\n"
                       "  --memory <trytes>     heap limit, default 8 MiB\n";
          std::exit(0);
@@ -236,8 +252,78 @@ std::vector<std::string> collectRelocations(const Linker::Unit& unit)
    return relocations;
 }
 
+void writeStats(const std::string& path, const Assemblers::REBEL6::ExecutableProgram& program,
+                std::uint32_t bss, bool simulate)
+{
+   std::map<std::string, std::uint32_t> opcodes;
+   const std::uint32_t count = program.getInstructionCount();
+   std::uint8_t size = 0;
+   for(std::uint32_t pc = 0; pc < count; pc += size)
+   {
+      const Expressions::Instruction* instr = program.loadInstruction(static_cast<std::int32_t>(pc), size);
+      if(instr == nullptr)
+      {
+         break;
+      }
+      ++opcodes[instr->getInstructionName()];
+   }
+
+   std::uint32_t retired = 0;
+   std::uint32_t flips = 0;
+   bool passed = false;
+   bool simulated = false;
+   if(simulate)
+   {
+      Simulators::REBEL6::Simulator simulator;
+      try
+      {
+         simulator.run(const_cast<Assemblers::REBEL6::ExecutableProgram&>(program));
+      }
+      catch(const Simulators::REBEL6::TestResult& result)
+      {
+         passed = result.passed;
+      }
+      retired = simulator.getNumberOfRanInstructions();
+      flips = simulator.getNumberOfTritFlips();
+      simulated = true;
+   }
+
+   std::ofstream file(path);
+   if(!file)
+   {
+      throw RebelError("cannot write " + path);
+   }
+   file << "{\n";
+   file << "  \"instructions\": " << count << ",\n";
+   file << "  \"data\": " << program.getMemory().size() << ",\n";
+   file << "  \"bss\": " << bss << ",\n";
+   file << "  \"entry\": " << program.loadSymbolAddress("main") << ",\n";
+   file << "  \"opcodes\": {";
+   bool first = true;
+   for(const auto& [name, occurrences]: opcodes)
+   {
+      if(!first)
+      {
+         file << ", ";
+      }
+      file << "\"" << name << "\": " << occurrences;
+      first = false;
+   }
+   file << "},\n";
+   if(simulated)
+   {
+      file << "  \"simulation\": {\"retired\": " << retired << ", \"trit_flips\": " << flips
+           << ", \"passed\": " << (passed ? "true" : "false") << "}\n";
+   }
+   else
+   {
+      file << "  \"simulation\": null\n";
+   }
+   file << "}\n";
+}
+
 AssemblyResult assemble(Expressions::ExpressionList& expressions, const std::string& base, bool writeTas,
-                        std::uint32_t memory, bool writeImage)
+                        std::uint32_t memory, bool writeImage, const std::string& statsPath, bool simulate)
 {
    Assemblers::REBEL6::ExecutableProgram program;
    if(memory != 0)
@@ -275,6 +361,11 @@ AssemblyResult assemble(Expressions::ExpressionList& expressions, const std::str
       {
          throw RebelError(error);
       }
+   }
+
+   if(!statsPath.empty())
+   {
+      writeStats(statsPath, program, assembler.getBssSizeTrytes(), simulate);
    }
 
    AssemblyResult result;
@@ -420,7 +511,8 @@ int linkUnits(const Options& options)
 
    Expressions::ExpressionList merged = Linker::link(units);
    const std::string base = options.output.empty() ? "linked" : options.output;
-   assemble(merged, base, !options.check, options.memory, options.emitImage && !options.check);
+   assemble(merged, base, !options.check, options.memory, options.emitImage && !options.check,
+            options.statsPath, options.simulate);
    if(options.check)
    {
       std::cout << "check: ok" << std::endl;
@@ -439,7 +531,7 @@ int singleUnit(const Options& options)
       Linker::Unit unit = Linker::Unit::fromObject(stem, source);
       Expressions::ExpressionList& expressions = unit.getExpressions();
       assemble(expressions, options.output.empty() ? stem : options.output, !options.check, options.memory,
-               options.emitImage && !options.check);
+               options.emitImage && !options.check, options.statsPath, options.simulate);
       if(options.check)
       {
          std::cout << "check: ok" << std::endl;
@@ -451,7 +543,8 @@ int singleUnit(const Options& options)
    {
       Linker::Unit unit = Linker::Unit::fromAssembly(stem, source);
       const std::vector<std::string> relocations = collectRelocations(unit);
-      AssemblyResult result = assemble(unit.getExpressions(), stem, false, options.memory, false);
+      AssemblyResult result = assemble(unit.getExpressions(), stem, false, options.memory, false,
+                                       options.statsPath, options.simulate);
       unit.writeObject(stem + ".mto", result.symbols, relocations, result.bss);
       return 0;
    }
@@ -470,7 +563,7 @@ int singleUnit(const Options& options)
    }
 
    assemble(translated, options.output.empty() ? stem : options.output, !options.check, options.memory,
-            options.emitImage && !options.check);
+            options.emitImage && !options.check, options.statsPath, options.simulate);
    if(options.check)
    {
       std::cout << "check: ok" << std::endl;
