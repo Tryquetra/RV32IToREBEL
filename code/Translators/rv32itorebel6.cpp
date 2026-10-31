@@ -112,6 +112,10 @@ void handleStore(const Translators::RV32IToRV32IBase* conv, const std::string& n
    }
    else // Pseudoinstruction
    {
+      if(op.size() < 3)
+      {
+         throw std::invalid_argument("storing to a symbol needs a temporary register");
+      }
       conv->at("aipc.t")({op[2], pcrel(op[1])}, el);
       createInstruction(el, name, op[0], zeroOffset(op[2]));
    }

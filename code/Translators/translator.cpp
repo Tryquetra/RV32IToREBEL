@@ -8,6 +8,8 @@
 #include <logger.h>
 
 #include <iostream>
+#include <unordered_map>
+#include <utility>
 #include <errors.h>
 
 namespace
@@ -15,8 +17,50 @@ namespace
 const Translators::RV32IToRV32IBase rv32i;
 const Translators::RV32IToREBEL6 rebel6;
 
+using Arity = std::pair<int, int>; // Minimum and maximum operand count.
+
+const std::unordered_map<std::string, Arity>& arities()
+{
+   static const std::unordered_map<std::string, Arity> table = {
+      {"fence", {0, 2}}, {"ecall", {0, 0}}, {"ebreak", {0, 0}}, {"nop", {0, 0}}, {"ret", {0, 0}},
+      {"j", {1, 1}}, {"jr", {1, 1}}, {"call", {1, 1}}, {"jal", {1, 2}}, {"jalr", {1, 3}},
+      {"lui", {2, 2}}, {"auipc", {2, 2}}, {"la", {2, 2}}, {"lla", {2, 2}}, {"li", {2, 2}}, {"mv", {2, 2}},
+      {"not", {2, 2}}, {"neg", {2, 2}}, {"seqz", {2, 2}}, {"snez", {2, 2}}, {"sltz", {2, 2}}, {"sgtz", {2, 2}},
+      {"beqz", {2, 2}}, {"bnez", {2, 2}}, {"blez", {2, 2}}, {"bgez", {2, 2}}, {"bltz", {2, 2}}, {"bgtz", {2, 2}},
+      {"lb", {2, 2}}, {"lh", {2, 2}}, {"lw", {2, 2}}, {"lbu", {2, 2}}, {"lhu", {2, 2}},
+      {"sb", {2, 3}}, {"sh", {2, 3}}, {"sw", {2, 3}},
+      {"add", {3, 3}}, {"sub", {3, 3}}, {"sll", {3, 3}}, {"slt", {3, 3}}, {"sltu", {3, 3}},
+      {"xor", {3, 3}}, {"srl", {3, 3}}, {"sra", {3, 3}}, {"or", {3, 3}}, {"and", {3, 3}},
+      {"addi", {3, 3}}, {"slti", {3, 3}}, {"sltiu", {3, 3}}, {"xori", {3, 3}}, {"ori", {3, 3}},
+      {"andi", {3, 3}}, {"slli", {3, 3}}, {"srli", {3, 3}}, {"srai", {3, 3}},
+      {"beq", {3, 3}}, {"bne", {3, 3}}, {"blt", {3, 3}}, {"bge", {3, 3}}, {"bltu", {3, 3}}, {"bgeu", {3, 3}},
+      {"bgt", {3, 3}}, {"ble", {3, 3}}, {"bgtu", {3, 3}}, {"bleu", {3, 3}},
+   };
+   return table;
+}
+
+void checkArity(const Expressions::Instruction& instr)
+{
+   const std::string& name = instr.getInstructionName();
+   const auto entry = arities().find(name);
+   if(entry == arities().end())
+   {
+      throw RebelError("unknown instruction \"" + name + "\"", instr.getLocation());
+   }
+
+   const std::size_t count = instr.getInstructionOperands().size();
+   const std::size_t min = static_cast<std::size_t>(entry->second.first);
+   const std::size_t max = static_cast<std::size_t>(entry->second.second);
+   if((count < min) || (count > max))
+   {
+      const std::string expected = (min == max) ? std::to_string(min) : (std::to_string(min) + " to " + std::to_string(max));
+      throw RebelError("instruction \"" + name + "\" takes " + expected + " operands, got " + std::to_string(count), instr.getLocation());
+   }
+}
+
 void resolveInstruction(const Expressions::Instruction* instr, Expressions::ExpressionList& out, const Translators::InstructionTranslatorBase& translator)
 {
+   checkArity(*instr);
    const std::string& name = instr->getInstructionName();
    const std::vector<std::string>& operands = instr->getInstructionOperands();
 
@@ -26,7 +70,7 @@ void resolveInstruction(const Expressions::Instruction* instr, Expressions::Expr
    }
    catch(const std::exception&e)
    {
-      std::cerr << __PRETTY_FUNC__ << ": Failed to translate \"" << *instr << "\": " << e.what() << std::endl;
+      throw RebelError("cannot translate \"" + instr->toString() + "\": " + e.what(), instr->getLocation());
    }
 }
 }
