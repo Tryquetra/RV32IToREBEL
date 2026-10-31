@@ -23,7 +23,6 @@ set(HEADERS
    Translators/translator.h
    Translators/instructiontranslatorbase.h
    Translators/rv32itorv32ibase.h
-   Translators/rv32itorebel2.h
    Translators/rv32itorebel6.h
    Linker/unit.h
    Linker/linker.h
@@ -62,7 +61,6 @@ set(SOURCES
    Translators/translator.cpp
    Translators/instructiontranslatorbase.cpp
    Translators/rv32itorv32ibase.cpp
-   Translators/rv32itorebel2.cpp
    Translators/rv32itorebel6.cpp
    Linker/unit.cpp
    Linker/linker.cpp
