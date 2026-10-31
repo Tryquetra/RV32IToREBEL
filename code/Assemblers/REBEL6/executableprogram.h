@@ -36,12 +36,16 @@ public:
 
    std::uint32_t getProgramSizeTrytes() const;
    std::uint32_t getInstructionsSizeTrytes() const;
+   std::uint32_t getHeapSizeTrytes() const;
+   std::uint32_t getMemoryLimitTrytes() const;
+   void setMemoryLimitTrytes(std::uint32_t limit);
 
    void printInstructions() const;
    void printSymbols() const;
 
 private:
    void doStoreToHeap(std::uint32_t heapAddress, const Tint& value, std::uint8_t numTrytes);
+   void ensureHeapCapacity(std::uint32_t endAddress);
 
    using InstructionMemoryMap = std::map<std::int32_t, Expressions::Instruction*>; // Address | Instruction
    using SymbolTableMap = std::map<std::string, std::int32_t>; // Label name | Start address of value
@@ -50,6 +54,7 @@ private:
    InstructionMemoryMap m_instructions; // Address, Instruction
    std::uint32_t m_instructionsSize;
    std::uint32_t m_heapSizeTrytes;
+   std::uint32_t m_memoryLimitTrytes;
 
    HeapVector m_memory;
    SymbolTableMap m_symbolTable;

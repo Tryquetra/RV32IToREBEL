@@ -9,7 +9,10 @@
 
 namespace
 {
-const std::uint32_t PROGRAM_SIZE_TRYTES = std::pow(3, 13) + 1; // About 1.6m trytes, add +1 so it becomes 4 tryte aligned and works with RV32I pointer arithmetic
+// Initial allocation. The heap grows on demand up to the memory limit.
+const std::uint32_t INITIAL_PROGRAM_SIZE_TRYTES = std::pow(3, 13) + 1; // About 1.6m trytes, add +1 so it becomes 4 tryte aligned and works with RV32I pointer arithmetic
+// Matches the 8 MiB data memory of the Setun-Doom REBEL-6 core.
+const std::uint32_t DEFAULT_MEMORY_LIMIT_TRYTES = 8u * 1024u * 1024u;
 }
 
 namespace Assemblers
@@ -20,8 +23,9 @@ namespace REBEL6
 ExecutableProgram::ExecutableProgram()
     : m_instructionsSize(0)
     , m_heapSizeTrytes(0)
+    , m_memoryLimitTrytes(DEFAULT_MEMORY_LIMIT_TRYTES)
 {
-   m_memory.resize(PROGRAM_SIZE_TRYTES, 0);
+   m_memory.resize(INITIAL_PROGRAM_SIZE_TRYTES, 0);
 }
 
 ExecutableProgram::~ExecutableProgram()
@@ -81,6 +85,23 @@ Expressions::Instruction* ExecutableProgram::loadInstruction(std::int32_t progra
    return instr;
 }
 
+void ExecutableProgram::ensureHeapCapacity(std::uint32_t endAddress)
+{
+   if(endAddress <= m_memory.size())
+   {
+      return;
+   }
+   if(endAddress > m_memoryLimitTrytes)
+   {
+      throw std::length_error(
+         "Program needs " + std::to_string(endAddress) + " heap trytes, memory limit is "
+         + std::to_string(m_memoryLimitTrytes));
+   }
+
+   std::uint64_t grown = std::max<std::uint64_t>(endAddress, static_cast<std::uint64_t>(m_memory.size()) * 2);
+   m_memory.resize(static_cast<std::uint32_t>(std::min<std::uint64_t>(grown, m_memoryLimitTrytes)), 0);
+}
+
 void ExecutableProgram::loadFromHeap(std::int32_t address, std::uint8_t numTrytes, Trytes& out) const
 {
    if((numTrytes > 4) || (numTrytes < 0))
@@ -89,7 +110,15 @@ void ExecutableProgram::loadFromHeap(std::int32_t address, std::uint8_t numTryte
       abort();
    }
 
+   if(address < static_cast<std::int32_t>(getInstructionsSizeTrytes()))
+   {
+      throw std::out_of_range("heap address below the instruction image: " + std::to_string(address));
+   }
    std::uint32_t heapAddress = address - getInstructionsSizeTrytes() /* +/- program start address if it's other than 0 */;
+   if(static_cast<std::uint64_t>(heapAddress) + numTrytes > m_memory.size())
+   {
+      throw std::out_of_range("heap read past the program image: " + std::to_string(address));
+   }
    for(std::uint8_t i = 0; i < numTrytes; ++i)
    {
       out.push_back(m_memory[heapAddress]);
@@ -129,6 +158,10 @@ void ExecutableProgram::storeToHeap(std::int32_t address, const Tint& value, std
       abort();
    }
 
+   if(address < static_cast<std::int32_t>(getInstructionsSizeTrytes()))
+   {
+      throw std::out_of_range("heap address below the instruction image: " + std::to_string(address));
+   }
    std::uint32_t heapAddress = address - getInstructionsSizeTrytes() /* +/- some value if program starts at address other than 0 */;
 
    doStoreToHeap(heapAddress, value, numTrytes);
@@ -136,21 +169,34 @@ void ExecutableProgram::storeToHeap(std::int32_t address, const Tint& value, std
 
 void ExecutableProgram::calculateMemorySize()
 {
-   std::int32_t memorySize = getProgramSizeTrytes() - getInstructionsSizeTrytes();
-   if((memorySize < 0 ) || (m_heapSizeTrytes > memorySize))
+   if(m_heapSizeTrytes > m_memoryLimitTrytes)
    {
-      std::cerr << __PRETTY_FUNC__ << ": Tried recalcuating memory size, but memory already overflowing" << std::endl;
-      abort();
+      throw std::length_error(
+         "Program needs " + std::to_string(m_heapSizeTrytes) + " heap trytes, memory limit is "
+         + std::to_string(m_memoryLimitTrytes));
    }
 
-   m_memory.resize(memorySize, 0);
-
-   // std::cout << "Program size: " << getProgramSizeTrytes() << " trytes; Instruction size: " << getInstructionsSizeTrytes() << " trytes; Memory size: " << m_memory.size() << " trytes" << std::endl;
+   m_memory.resize(m_heapSizeTrytes, 0);
 }
 
 std::uint32_t ExecutableProgram::getProgramSizeTrytes() const
 {
-   return PROGRAM_SIZE_TRYTES;
+   return getInstructionsSizeTrytes() + m_heapSizeTrytes;
+}
+
+std::uint32_t ExecutableProgram::getHeapSizeTrytes() const
+{
+   return m_heapSizeTrytes;
+}
+
+std::uint32_t ExecutableProgram::getMemoryLimitTrytes() const
+{
+   return m_memoryLimitTrytes;
+}
+
+void ExecutableProgram::setMemoryLimitTrytes(std::uint32_t limit)
+{
+   m_memoryLimitTrytes = limit;
 }
 
 std::uint32_t ExecutableProgram::getInstructionsSizeTrytes() const
@@ -197,6 +243,8 @@ void ExecutableProgram::doStoreToHeap(std::uint32_t heapAddress, const Tint& val
    }
 
    trits.resize(numTrits, 0); // Fill the rest with zeroes so we ensure the memory allocated for this value has all trits properly reset
+
+   ensureHeapCapacity(static_cast<std::uint64_t>(heapAddress) + numTrytes);
 
    for(std::uint8_t i = 0; i < numTrytes; ++i)
    {
