@@ -24,6 +24,8 @@ public:
    void executeProgram(Assemblers::RV32I::ExecutableProgram& program);
    std::uint32_t getNumberOfRanInstructions() const;
    std::uint32_t getBitFlipCost() const;
+   std::int32_t getRegister(const std::string& name) { return m_registers.load(name); }
+   std::vector<std::string> getRegisterNames() { return m_registers.getNames(); }
 
 private:
    void initRegisters(std::int32_t programSizeBytes);

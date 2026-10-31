@@ -24,6 +24,7 @@ class CPU
    void executeProgram(Assemblers::REBEL6::ExecutableProgram& program);
    std::uint32_t getNumberOfRanInstructions() const;
    std::uint32_t getTritFlipCost() const;
+   Tint getRegister(const std::string& name) { return m_registers.load(name); }
 
  private:
    void initRegisters(std::int32_t programSizeTrytes);

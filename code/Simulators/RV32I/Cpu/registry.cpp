@@ -109,6 +109,16 @@ void Registry::store(const std::string& regName, std::int32_t regValue)
    m_numBitFlips += countBitFlips(oldVal, regValue);
 }
 
+std::vector<std::string> Registry::getNames() const
+{
+   std::vector<std::string> names;
+   for(const auto& [name, value]: m_registry)
+   {
+      names.push_back(name);
+   }
+   return names;
+}
+
 std::int32_t Registry::load(const std::string& regName)
 {
    std::string abiName;

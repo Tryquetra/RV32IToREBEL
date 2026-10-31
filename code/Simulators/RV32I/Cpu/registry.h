@@ -2,6 +2,7 @@
 
 #include <unordered_map>
 #include <string>
+#include <vector>
 
 namespace Simulators
 {
@@ -22,6 +23,7 @@ class Registry
    std::int32_t getAccumulatedBitFlips() const;
 
    void printRegistry();
+   std::vector<std::string> getNames() const;
 
    static std::uint8_t getIntegerValue(const std::string& regName);
 

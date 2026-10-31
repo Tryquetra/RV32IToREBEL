@@ -18,6 +18,7 @@ class Simulator
 
    std::uint32_t getNumberOfRanInstructions();
    std::uint32_t getNumberOfTritFlips();
+   Tint getRegister(const std::string& name) { return m_cpu.getRegister(name); }
 
  private:
    CPU m_cpu;

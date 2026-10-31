@@ -13,6 +13,9 @@
 
 #include "Assemblers/REBEL6/assembler.h"
 #include "Assemblers/REBEL6/executableprogram.h"
+#include "Assemblers/RV32I/assembler.h"
+#include "Assemblers/RV32I/executableprogram.h"
+#include "Simulators/RV32I/simulator.h"
 #include "Simulators/REBEL6/simulator.h"
 #include "Simulators/REBEL6/testresult.h"
 
@@ -37,6 +40,7 @@ struct Options
    std::string target = "rebel-6";
    std::uint32_t memory = 0;
    std::string testDir;
+   bool diff = false;
    bool emitObject = false;
    bool emitImage = false;
    bool link = false;
@@ -75,6 +79,10 @@ Options parseOptions(int argc, char* argv[])
       {
          options.check = true;
       }
+      else if(arg == "--diff")
+      {
+         options.diff = true;
+      }
       else if(arg == "--run-tests")
       {
          if(i + 1 >= argc)
@@ -112,6 +120,7 @@ Options parseOptions(int argc, char* argv[])
                       "  --emit-image          write an R6IM image next to the .tas\n"
                       "  --check               assemble and validate without writing outputs\n"
                       "  --run-tests <dir>     assemble and simulate every .s test in the directory\n"
+                      "  --diff                run the RV32I and REBEL-6 simulators and compare registers\n"
                       "  --target <isa>        translation target (rebel-6)\n"
                       "  --memory <trytes>     heap limit, default 8 MiB\n";
          std::exit(0);
@@ -274,6 +283,59 @@ AssemblyResult assemble(Expressions::ExpressionList& expressions, const std::str
    return result;
 }
 
+int diffRun(const Options& options)
+{
+   const std::string source = readFile(options.inputs.front());
+   Lexer lexer(source);
+   Parser parser(&lexer);
+   Expressions::ExpressionList parsed;
+   parser.parse(parsed);
+
+   Expressions::ExpressionList rv32iExpressions;
+   Expressions::ExpressionList rebel6Expressions;
+   Translators::Translator::Translate("rv32i", parsed, rv32iExpressions);
+   Translators::Translator::Translate("rebel-6", parsed, rebel6Expressions);
+   for(Expressions::Expression* expr: parsed)
+   {
+      delete expr;
+   }
+
+   Assemblers::RV32I::ExecutableProgram rv32iProgram;
+   Assemblers::RV32I::Assembler rv32iAssembler(rv32iExpressions, rv32iProgram);
+   rv32iAssembler.init();
+   rv32iAssembler.run();
+
+   Assemblers::REBEL6::ExecutableProgram rebel6Program;
+   Assemblers::REBEL6::Assembler rebel6Assembler(rebel6Expressions, rebel6Program);
+   rebel6Assembler.init();
+   rebel6Assembler.run();
+
+   Simulators::RV32I::Simulator rv32iSimulator;
+   Simulators::REBEL6::Simulator rebel6Simulator;
+   rv32iSimulator.run(rv32iProgram);
+   rebel6Simulator.run(rebel6Program);
+
+   int mismatches = 0;
+   for(const std::string& name: rv32iSimulator.getRegisterNames())
+   {
+      if((name == "sp") || (name == "ra") || (name == "zero"))
+      {
+         continue;
+      }
+      const std::int32_t left = rv32iSimulator.getRegister(name);
+      const std::int32_t right = static_cast<std::int32_t>(rebel6Simulator.getRegister(name));
+      if(left != right)
+      {
+         std::cout << "MISMATCH " << name << ": rv32i=" << left << " rebel6=" << right << std::endl;
+         ++mismatches;
+      }
+   }
+   std::cout << "diff: " << mismatches << " mismatched registers, rv32i "
+             << rv32iSimulator.getNumberOfRanInstructions() << " instructions, rebel6 "
+             << rebel6Simulator.getNumberOfRanInstructions() << std::endl;
+   return (mismatches == 0) ? 0 : 1;
+}
+
 int runTests(const std::string& directory)
 {
    std::vector<std::filesystem::path> tests;
@@ -422,6 +484,14 @@ int run(int argc, char* argv[])
    if(!options.testDir.empty())
    {
       return runTests(options.testDir);
+   }
+   if(options.diff)
+   {
+      if(options.inputs.size() != 1)
+      {
+         throw RebelError("--diff takes exactly one input");
+      }
+      return diffRun(options);
    }
    if(options.inputs.empty())
    {

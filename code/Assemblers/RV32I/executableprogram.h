@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Parsers/ternarylogic.h>
+
 #include <string>
 #include <map>
 #include <vector>
@@ -34,6 +36,8 @@ public:
 
    std::uint32_t getProgramSizeBytes() const;
    std::uint32_t getInstructionsSizeBytes() const;
+
+   const std::vector<unsigned char>& getMemory() const { return m_memory; }
 
    void printInstructions() const;
    void printSymbols() const;
