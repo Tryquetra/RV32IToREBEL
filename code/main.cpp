@@ -412,6 +412,15 @@ int diffRun(const Options& options)
    rv32iSimulator.run(rv32iProgram);
    rebel6Simulator.run(rebel6Program);
 
+   for(Expressions::Expression* expr: rv32iExpressions)
+   {
+      delete expr;
+   }
+   for(Expressions::Expression* expr: rebel6Expressions)
+   {
+      delete expr;
+   }
+
    int mismatches = 0;
    for(const std::string& name: rv32iSimulator.getRegisterNames())
    {
@@ -471,6 +480,10 @@ int runTests(const std::string& directory)
 
          Simulators::REBEL6::Simulator simulator;
          simulator.run(program);
+         for(Expressions::Expression* expr: translated)
+         {
+            delete expr;
+         }
          std::cout << "FAIL " << name << " (no ecall result)" << std::endl;
          ++failed;
       }
@@ -519,6 +532,10 @@ int linkUnits(const Options& options)
    const std::string base = options.output.empty() ? "linked" : options.output;
    assemble(merged, base, !options.check && !options.noTas, options.memory, options.emitImage && !options.check,
             options.statsPath, options.simulate);
+   for(Expressions::Expression* expr: merged)
+   {
+      delete expr;
+   }
    if(options.check)
    {
       std::cout << "check: ok" << std::endl;
@@ -538,6 +555,10 @@ int singleUnit(const Options& options)
       Expressions::ExpressionList& expressions = unit.getExpressions();
       assemble(expressions, options.output.empty() ? stem : options.output, !options.check && !options.noTas, options.memory,
                options.emitImage && !options.check, options.statsPath, options.simulate);
+      for(Expressions::Expression* expr: expressions)
+      {
+         delete expr;
+      }
       if(options.check)
       {
          std::cout << "check: ok" << std::endl;
@@ -552,6 +573,10 @@ int singleUnit(const Options& options)
       AssemblyResult result = assemble(unit.getExpressions(), stem, false, options.memory, false,
                                        options.statsPath, options.simulate);
       unit.writeObject(stem + ".mto", result.symbols, relocations, result.bss);
+      for(Expressions::Expression* expr: unit.getExpressions())
+      {
+         delete expr;
+      }
       return 0;
    }
 
@@ -570,6 +595,10 @@ int singleUnit(const Options& options)
 
    assemble(translated, options.output.empty() ? stem : options.output, !options.check && !options.noTas, options.memory,
             options.emitImage && !options.check, options.statsPath, options.simulate);
+   for(Expressions::Expression* expr: translated)
+   {
+      delete expr;
+   }
    if(options.check)
    {
       std::cout << "check: ok" << std::endl;
