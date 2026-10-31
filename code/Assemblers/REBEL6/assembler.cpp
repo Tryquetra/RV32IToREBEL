@@ -16,27 +16,10 @@
 
 namespace
 {
-bool parsePlainInteger(const std::string& text, std::int64_t& out)
-{
-   if(text.empty())
-   {
-      return false;
-   }
-   char* end = nullptr;
-   errno = 0;
-   const long long value = std::strtoll(text.c_str(), &end, 0);
-   if((end == text.c_str()) || (*end != '\0') || (errno == ERANGE))
-   {
-      return false;
-   }
-   out = value;
-   return true;
-}
-
 void checkDataValue(const std::string& text, unsigned bits, SourceLocation location)
 {
    std::int64_t value = 0;
-   if(!parsePlainInteger(text, value))
+   if(!ParseUtils::parseInteger(text, value))
    {
       return; // A symbol; relocations handle it.
    }
@@ -418,7 +401,7 @@ bool Assembler::resolveIfObject(const Expressions::Directive* directive, std::ui
          // Can refer to labels. In such cases, remember this and resolve the .word value once we know the value of the label.
          // Still allocate space on the heap.
          std::int64_t parsed = 0;
-         if(parsePlainInteger(str, parsed))
+         if(ParseUtils::parseInteger(str, parsed))
          {
             checkDataValue(str, 32, directive->getLocation());
             value = static_cast<std::int32_t>(parsed);
@@ -505,7 +488,18 @@ void Assembler::resolveOperands()
    Expressions::Instruction* instr = m_executable.loadInstruction(pc, instrSize);
    while(instr != nullptr)
    {
+      const AssemblerUtils::InstructionType instrType = AssemblerUtils::getInstructionType(instr->getInstructionName());
       std::vector<std::string>& operands = instr->getInstructionOperands();
+
+      // A numeric branch or jump offset is already relative to the PC, in instruction slots.
+      bool relativeOffset = false;
+      std::int64_t relativeValue = 0;
+      if(((instrType == AssemblerUtils::InstructionType::BRANCH) || (instrType == AssemblerUtils::InstructionType::JUMP))
+         && !operands.empty())
+      {
+         relativeOffset = ParseUtils::parseInteger(operands.back(), relativeValue);
+      }
+
       for(std::string& operand: operands)
       {
          if(operand[0] == '%')
@@ -555,19 +549,25 @@ void Assembler::resolveOperands()
       }
 
       // Offset branching and jumps based on PC
-      AssemblerUtils::InstructionType instrType = AssemblerUtils::getInstructionType(instr->getInstructionName());
       if((instrType == AssemblerUtils::InstructionType::BRANCH) || (instrType == AssemblerUtils::InstructionType::JUMP))
       {
          std::int32_t opInt = 0;
-         try
+         if(relativeOffset)
          {
-            opInt = stoi(operands.back());
+            opInt = static_cast<std::int32_t>(relativeValue);
          }
-         catch(const std::exception&)
+         else
          {
-            throw RebelError("unresolved branch target \"" + operands.back() + "\"", instr->getLocation());
+            try
+            {
+               opInt = stoi(operands.back());
+            }
+            catch(const std::exception&)
+            {
+               throw RebelError("unresolved branch target \"" + operands.back() + "\"", instr->getLocation());
+            }
+            opInt = opInt - pc;
          }
-         opInt = opInt - pc;
          operands.back() = std::to_string(opInt);
       }
 
@@ -608,7 +608,7 @@ void Assembler::checkImmediateRange(const Expressions::Instruction& instr, Assem
    }
 
    std::int64_t value = 0;
-   if(!parsePlainInteger(text, value))
+   if(!ParseUtils::parseInteger(text, value))
    {
       return; // Symbol or register, checked elsewhere.
    }

@@ -5,10 +5,12 @@
 
 #include <Expressions/all_expressions.h>
 #include <Parsers/expressionparser.h>
+#include <Parsers/parseutils.h>
 #include <logger.h>
 
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <errors.h>
 
@@ -56,6 +58,44 @@ void checkArity(const Expressions::Instruction& instr)
       const std::string expected = (min == max) ? std::to_string(min) : (std::to_string(min) + " to " + std::to_string(max));
       throw RebelError("instruction \"" + name + "\" takes " + expected + " operands, got " + std::to_string(count), instr.getLocation());
    }
+}
+
+bool isBranchOrJump(const std::string& name)
+{
+   static const std::unordered_set<std::string> names = {
+      "beq", "bne", "blt", "bge", "bltu", "bgeu",
+      "beq.t", "bne.t", "blt.t", "bge.t", "jal", "jal.t",
+   };
+   return names.count(name) > 0;
+}
+
+// RV32I offsets are byte offsets; REBEL-6 branch and jump offsets count instruction slots.
+void normalizeBranchOffset(Expressions::Expression* expr)
+{
+   if(expr->getExpressionType() != Expressions::Expression::ExpressionType::INSTRUCTION)
+   {
+      return;
+   }
+   Expressions::Instruction* instr = static_cast<Expressions::Instruction*>(expr);
+   if(!isBranchOrJump(instr->getInstructionName()))
+   {
+      return;
+   }
+   std::vector<std::string>& operands = instr->getInstructionOperands();
+   if(operands.empty())
+   {
+      return;
+   }
+   std::int64_t offset = 0;
+   if(!ParseUtils::parseInteger(operands.back(), offset))
+   {
+      return; // A symbol, resolved by the assembler.
+   }
+   if((offset % 4) != 0)
+   {
+      throw RebelError("offset " + operands.back() + " is not a multiple of 4", instr->getLocation());
+   }
+   operands.back() = std::to_string(offset / 4);
 }
 
 void resolveInstruction(const Expressions::Instruction* instr, Expressions::ExpressionList& out, const Translators::InstructionTranslatorBase& translator)
@@ -127,6 +167,7 @@ void Translator::Translate(const std::string& targetISAName, const Expressions::
             {
                (*it)->setLocation(instr->getLocation());
             }
+            normalizeBranchOffset(*it);
          }
          break;
       }

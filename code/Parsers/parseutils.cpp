@@ -4,6 +4,8 @@
 
 #include <regex>
 #include <iostream>
+#include <cerrno>
+#include <cstdlib>
 #include <errors.h>
 
 // Define taken from https://github.com/riscv-software-src/riscv-tests/tree/master/isa/macros/scalar/test_macros.h
@@ -85,6 +87,23 @@ bool ParseUtils::parseRegisterOffset(const std::string& in, std::string& offset,
    }
 
    return retVal;
+}
+
+bool ParseUtils::parseInteger(const std::string& in, std::int64_t& out)
+{
+   if(in.empty())
+   {
+      return false;
+   }
+   char* end = nullptr;
+   errno = 0;
+   const long long value = std::strtoll(in.c_str(), &end, 0);
+   if((end == in.c_str()) || (*end != '\0') || (errno == ERANGE))
+   {
+      return false;
+   }
+   out = value;
+   return true;
 }
 
 bool ParseUtils::parseImmediate(std::uint8_t immediateSizeBits, const std::string& in, std::int32_t& out)

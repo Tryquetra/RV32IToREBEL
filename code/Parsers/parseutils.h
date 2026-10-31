@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 class ParseUtils
@@ -12,6 +13,8 @@ public:
    static bool parseAssemblerModifierRs(const std::string& in, ASSEMBLER_MODIFIER& type, std::string& value, std::string& rs);
    static bool parseRegisterOffset(const std::string& in, std::string& offset, std::string& rs1);
    static bool parseImmediate(std::uint8_t immediateSizeBits, const std::string& in, std::int32_t& out);
+   // Parses a plain decimal or 0x-prefixed integer. Returns false for symbols and registers.
+   static bool parseInteger(const std::string& in, std::int64_t& out);
    static bool parseImmediate(std::uint8_t immediateSizeBits, std::int32_t in, std::int32_t &out);
    static void generateTempLabel(std::string& out);
 };
