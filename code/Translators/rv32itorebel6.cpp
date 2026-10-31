@@ -346,6 +346,38 @@ void RV32IToREBEL6::fillInstructionMap()
    // ebreak --> ebreak
    //m_instructionMap["ebreak"] = [] (const StringList&, Expressions::ExpressionList& el) { createInstruction(el, "ebreak"); };
 
+   // Clang pseudoinstructions used for narrowing and widening.
+   // zext.b rd, rs --> andi rd, rs, 255
+   m_instructionMap["zext.b"] = [this] (const StringList& op, Expressions::ExpressionList& el) { at("andi")({op[0], op[1], "255"}, el); };
+
+   // zext.h rd, rs --> slli rd, rs, 16; srli rd, rd, 16
+   m_instructionMap["zext.h"] = [this] (const StringList& op, Expressions::ExpressionList& el)
+   {
+      at("slli")({op[0], op[1], "16"}, el);
+      at("srli")({op[0], op[0], "16"}, el);
+   };
+
+   // sext.b rd, rs --> slli rd, rs, 24; srai rd, rd, 24
+   m_instructionMap["sext.b"] = [this] (const StringList& op, Expressions::ExpressionList& el)
+   {
+      at("slli")({op[0], op[1], "24"}, el);
+      at("srai")({op[0], op[0], "24"}, el);
+   };
+
+   // sext.h rd, rs --> slli rd, rs, 16; srai rd, rd, 16
+   m_instructionMap["sext.h"] = [this] (const StringList& op, Expressions::ExpressionList& el)
+   {
+      at("slli")({op[0], op[1], "16"}, el);
+      at("srai")({op[0], op[0], "16"}, el);
+   };
+
+   // tail offset --> aipc.t x6, %pcrel(offset); jalr.t x0, 0(x6)
+   m_instructionMap["tail"] = [this] (const StringList& op, Expressions::ExpressionList& el)
+   {
+      at("aipc.t")({"x6", pcrel(op[0])}, el);
+      at("jalr.t")({"x0", zeroOffset("x6")}, el);
+   };
+
    // RV32I PSEUDOINSTRUCTION OVERRIDES
 
    // la rd, symbol --> aipc.t rd, %pcrel(symbol)
@@ -500,9 +532,9 @@ void RV32IToREBEL6::fillInstructionMap()
 
    // Need their own because of memory sizes and overholding binary overflows when storing to memory. Both load and store
    // should have their own both in binary and ternary to ensure overflows are kept consistent in binary and ternary
-   //m_instructionMap["st.t"] = [this] (const StringList& op, Expressions::ExpressionList& el) { handleStore(this, "st.t", op, el); };
-   //m_instructionMap["sh.t"] = [this] (const StringList& op, Expressions::ExpressionList& el) { handleStore(this, "sh.t", op, el); };
-   //m_instructionMap["sw.t"] = [this] (const StringList& op, Expressions::ExpressionList& el) { handleStore(this, "sw.t", op, el); };;
+   m_instructionMap["st.t"] = [this] (const StringList& op, Expressions::ExpressionList& el) { handleStore(this, "st.t", op, el); };
+   m_instructionMap["sh.t"] = [this] (const StringList& op, Expressions::ExpressionList& el) { handleStore(this, "sh.t", op, el); };
+   m_instructionMap["sw.t"] = [this] (const StringList& op, Expressions::ExpressionList& el) { handleStore(this, "sw.t", op, el); };
 
    // Need their own because of addressing
    // beq.t rs1, rs2, offset --> beq.t rs1, rs2, offset
@@ -521,9 +553,9 @@ void RV32IToREBEL6::fillInstructionMap()
    m_instructionMap["slti.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "slti.t", op[0], op[1], op[2]); };
 
    // Need their own for tritwise operations
-   //m_instructionMap["xori.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "xori.t", op[0], op[1], op[2]); };
-   //m_instructionMap["ori.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "ori.t", op[0], op[1], op[2]); };;
-   //m_instructionMap["andi.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "andi.t", op[0], op[1], op[2]); };
+   m_instructionMap["xori.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "xori.t", op[0], op[1], op[2]); };
+   m_instructionMap["ori.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "ori.t", op[0], op[1], op[2]); };
+   m_instructionMap["andi.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "andi.t", op[0], op[1], op[2]); };
    //m_instructionMap["sli.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "sli.t", op[0], op[1], op[2]); };
    //m_instructionMap["sri.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "sri.t", op[0], op[1], op[2]); };
    //m_instructionMap["sl.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "sl.t", op[0], op[1], op[2]); };
@@ -532,10 +564,9 @@ void RV32IToREBEL6::fillInstructionMap()
    m_instructionMap["slt.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "slt.t", op[0], op[1], op[2]); };
 
    // Need their own for tritwise operations
-   //m_instructionMap["xor.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "xor.t", op[0], op[1], op[2]); };
-   //m_instructionMap["sr.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "sr.t", op[0], op[1], op[2]); };
-   //m_instructionMap["or.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "or.t", op[0], op[1], op[2]); };
-   //m_instructionMap["and.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "and.t", op[0], op[1], op[2]); };
+   m_instructionMap["xor.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "xor.t", op[0], op[1], op[2]); };
+   m_instructionMap["or.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "or.t", op[0], op[1], op[2]); };
+   m_instructionMap["and.t"] = [] (const StringList& op, Expressions::ExpressionList& el) { createInstruction(el, "and.t", op[0], op[1], op[2]); };
 
    // Nice to have as it supports the max value of a 32 bit integer without requiring an extra instruction
    // li.t rd, imm --> li.t rd, imm
