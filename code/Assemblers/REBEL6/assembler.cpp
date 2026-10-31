@@ -497,7 +497,9 @@ void Assembler::resolveOperands()
             ParseUtils::parseImmediate(32, operand, dummy);
             operand = std::to_string(dummy);
          }
-         else if((std::isalpha(operand[0])) || (operand[0] == '.'))
+         // Symbol names may start with a letter, `_`, `.` or `$`; `_` covers every
+         // runtime helper and every symbol the C compiler emits with a leading underscore.
+         else if(std::isalpha(static_cast<unsigned char>(operand[0])) || (operand[0] == '_') || (operand[0] == '.') || (operand[0] == '$'))
          {
             try
             {
