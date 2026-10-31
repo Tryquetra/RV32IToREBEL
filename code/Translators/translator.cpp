@@ -25,7 +25,7 @@ const std::unordered_map<std::string, Arity>& arities()
 {
    static const std::unordered_map<std::string, Arity> table = {
       {"fence", {0, 2}}, {"ecall", {0, 0}}, {"ebreak", {0, 0}}, {"nop", {0, 0}}, {"ret", {0, 0}},
-      {"j", {1, 1}}, {"jr", {1, 1}}, {"call", {1, 1}}, {"jal", {1, 2}}, {"jalr", {1, 3}},
+      {"j", {1, 1}}, {"jr", {1, 2}}, {"call", {1, 1}}, {"jal", {1, 2}}, {"jalr", {1, 3}},
       {"lui", {2, 2}}, {"auipc", {2, 2}}, {"la", {2, 2}}, {"lla", {2, 2}}, {"li", {2, 2}}, {"mv", {2, 2}},
       {"not", {2, 2}}, {"neg", {2, 2}}, {"seqz", {2, 2}}, {"snez", {2, 2}}, {"sltz", {2, 2}}, {"sgtz", {2, 2}},
       {"beqz", {2, 2}}, {"bnez", {2, 2}}, {"blez", {2, 2}}, {"bgez", {2, 2}}, {"bltz", {2, 2}}, {"bgtz", {2, 2}},

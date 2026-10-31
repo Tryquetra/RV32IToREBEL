@@ -13,10 +13,14 @@
 
 #include "Assemblers/REBEL6/assembler.h"
 #include "Assemblers/REBEL6/executableprogram.h"
+#include "Simulators/REBEL6/simulator.h"
+#include "Simulators/REBEL6/testresult.h"
 
 #include <errors.h>
 
+#include <algorithm>
 #include <cstdint>
+#include <filesystem>
 #include <fstream>
 #include <filesystem>
 #include <iostream>
@@ -32,6 +36,7 @@ struct Options
    std::string output;
    std::string target = "rebel-6";
    std::uint32_t memory = 0;
+   std::string testDir;
    bool emitObject = false;
    bool emitImage = false;
    bool link = false;
@@ -70,6 +75,14 @@ Options parseOptions(int argc, char* argv[])
       {
          options.check = true;
       }
+      else if(arg == "--run-tests")
+      {
+         if(i + 1 >= argc)
+         {
+            throw RebelError("--run-tests needs a directory");
+         }
+         options.testDir = argv[++i];
+      }
       else if(arg == "--link")
       {
          options.link = true;
@@ -98,6 +111,7 @@ Options parseOptions(int argc, char* argv[])
                       "  --emit-obj            write a .mto object per input\n"
                       "  --emit-image          write an R6IM image next to the .tas\n"
                       "  --check               assemble and validate without writing outputs\n"
+                      "  --run-tests <dir>     assemble and simulate every .s test in the directory\n"
                       "  --target <isa>        translation target (rebel-6)\n"
                       "  --memory <trytes>     heap limit, default 8 MiB\n";
          std::exit(0);
@@ -260,6 +274,71 @@ AssemblyResult assemble(Expressions::ExpressionList& expressions, const std::str
    return result;
 }
 
+int runTests(const std::string& directory)
+{
+   std::vector<std::filesystem::path> tests;
+   for(const auto& entry: std::filesystem::directory_iterator(directory))
+   {
+      if(entry.is_regular_file() && (entry.path().extension() == ".s"))
+      {
+         tests.push_back(entry.path());
+      }
+   }
+   std::sort(tests.begin(), tests.end());
+
+   int passed = 0;
+   int failed = 0;
+   for(const std::filesystem::path& path: tests)
+   {
+      const std::string name = path.stem().string();
+      try
+      {
+         const std::string source = readFile(path.string());
+         Lexer lexer(source);
+         Parser parser(&lexer);
+         Expressions::ExpressionList parsed;
+         parser.parse(parsed);
+         Expressions::ExpressionList translated;
+         Translators::Translator::Translate("rebel-6", parsed, translated);
+         for(Expressions::Expression* expr: parsed)
+         {
+            delete expr;
+         }
+
+         Assemblers::REBEL6::ExecutableProgram program;
+         Assemblers::REBEL6::Assembler assembler(translated, program);
+         assembler.init();
+         assembler.run();
+
+         Simulators::REBEL6::Simulator simulator;
+         simulator.run(program);
+         std::cout << "FAIL " << name << " (no ecall result)" << std::endl;
+         ++failed;
+      }
+      catch(const Simulators::REBEL6::TestResult& result)
+      {
+         if(result.passed)
+         {
+            std::cout << "PASS " << name << std::endl;
+            ++passed;
+         }
+         else
+         {
+            std::cout << "FAIL " << name << " (test " << result.test << ")" << std::endl;
+            ++failed;
+         }
+      }
+      catch(const std::exception& error)
+      {
+         std::cout << "FAIL " << name << " (" << error.what() << ")" << std::endl;
+         ++failed;
+      }
+   }
+
+   std::cout << "tests: " << passed << "/" << (passed + failed) << " passed" << std::endl;
+   return (failed == 0) ? 0 : 1;
+}
+
 int linkUnits(const Options& options)
 {
    std::vector<Linker::Unit> units;
@@ -340,6 +419,10 @@ int singleUnit(const Options& options)
 int run(int argc, char* argv[])
 {
    const Options options = parseOptions(argc, argv);
+   if(!options.testDir.empty())
+   {
+      return runTests(options.testDir);
+   }
    if(options.inputs.empty())
    {
       std::cerr << "usage: RV32IToREBEL [options] <file.s|file.mto>...\n";

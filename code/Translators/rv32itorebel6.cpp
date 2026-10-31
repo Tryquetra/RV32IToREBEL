@@ -428,6 +428,20 @@ void RV32IToREBEL6::fillInstructionMap()
                               }
                            };*/
 
+   // jr rs --> jalr x0, 0(rs)
+   // jr rs, offset --> jalr x0, offset(rs) // Ancient syntax used by the official tests
+   m_instructionMap["jr"] = [this] (const StringList& op, Expressions::ExpressionList& el)
+                           {
+                              if(op.size() == 2)
+                              {
+                                 at("jalr")({"x0", createOffset(op[1], op[0])}, el);
+                              }
+                              else
+                              {
+                                 at("jalr")({"x0", zeroOffset(op[0])}, el);
+                              }
+                           };
+
    // ret --> jalr x0, 0(x1)
    //m_instructionMap["ret"] = [this] (const StringList&, Expressions::ExpressionList& el) { at("jalr")({"x0", zeroOffset("x1")}, el); };
 

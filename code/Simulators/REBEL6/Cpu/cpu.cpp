@@ -5,6 +5,7 @@
 #include <logger.h>
 
 #include <Expressions/instruction.h>
+#include <Simulators/REBEL6/testresult.h>
 #include <Parsers/parseutils.h>
 #include <Assemblers/REBEL6/executableprogram.h>
 #include <Assemblers/REBEL6/assemblerutils.h>
@@ -461,21 +462,12 @@ namespace Simulators
       {
          if (name == "ecall")
          {
-            m_registers.printRegistry();
-            std::cout << std::endl;
-
-            std::int32_t statusVal = m_registers.load("a0");
+            const std::int32_t statusVal = m_registers.load("a0");
             if (statusVal == 0)
             {
-               std::cout << "REBEL-6 TEST PASSED" << std::endl;
+               throw TestResult{true, 0};
             }
-            else
-            {
-               std::int32_t failedTestNum = m_registers.load("gp");
-               std::cout << "REBEL-6 TEST FAILED" << std::endl;
-               std::cout << "Test number " << failedTestNum << " failed" << std::endl;
-               abort(); // A bit excessive, but practicing what seems to be the similar behavior for the RISC-V "official" instruction tests
-            }
+            throw TestResult{false, m_registers.load("gp")};
          }
          // else if(name == "ebreak") ;
          // else if(name == "sb") ;
