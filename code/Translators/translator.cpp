@@ -41,6 +41,7 @@ const std::unordered_map<std::string, Arity>& arities()
       {"xori.t", {3, 3}}, {"ori.t", {3, 3}}, {"andi.t", {3, 3}},
       {"xor.t", {3, 3}}, {"or.t", {3, 3}}, {"and.t", {3, 3}},
       {"st.t", {2, 3}}, {"sh.t", {2, 3}}, {"sw.t", {2, 3}},
+      {"mul", {3, 3}}, {"div", {3, 3}}, {"divu", {3, 3}}, {"rem", {3, 3}}, {"remu", {3, 3}},
    };
    return table;
 }

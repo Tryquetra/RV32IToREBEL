@@ -378,6 +378,33 @@ void RV32IToREBEL6::fillInstructionMap()
       at("jalr.t")({"x0", zeroOffset("x6")}, el);
    };
 
+   // RV32M lowers to the soft runtime helpers. The sequence preserves a0, a1, ra and t3, so it is
+   // safe in any context; the program must link __mulsi3, __divsi3, __udivsi3, __modsi3 or
+   // __umodsi3 (the Setun guest provides them in softmul.c).
+   const auto libcall = [this] (const StringList& op, Expressions::ExpressionList& el, const std::string& helper)
+   {
+      at("addi")({"sp", "sp", "-16"}, el);
+      at("sw")({"a0", "0(sp)"}, el);
+      at("sw")({"a1", "4(sp)"}, el);
+      at("sw")({"ra", "8(sp)"}, el);
+      at("sw")({"t3", "12(sp)"}, el);
+      at("mv")({"a0", op[1]}, el);
+      at("mv")({"a1", op[2]}, el);
+      at("call")({helper}, el);
+      at("mv")({"t3", "a0"}, el);
+      at("lw")({"ra", "8(sp)"}, el);
+      at("lw")({"a1", "4(sp)"}, el);
+      at("lw")({"a0", "0(sp)"}, el);
+      at("addi")({"sp", "sp", "16"}, el);
+      at("mv")({op[0], "t3"}, el);
+   };
+
+   m_instructionMap["mul"] = [libcall] (const StringList& op, Expressions::ExpressionList& el) { libcall(op, el, "__mulsi3"); };
+   m_instructionMap["div"] = [libcall] (const StringList& op, Expressions::ExpressionList& el) { libcall(op, el, "__divsi3"); };
+   m_instructionMap["divu"] = [libcall] (const StringList& op, Expressions::ExpressionList& el) { libcall(op, el, "__udivsi3"); };
+   m_instructionMap["rem"] = [libcall] (const StringList& op, Expressions::ExpressionList& el) { libcall(op, el, "__modsi3"); };
+   m_instructionMap["remu"] = [libcall] (const StringList& op, Expressions::ExpressionList& el) { libcall(op, el, "__umodsi3"); };
+
    // RV32I PSEUDOINSTRUCTION OVERRIDES
 
    // la rd, symbol --> aipc.t rd, %pcrel(symbol)
