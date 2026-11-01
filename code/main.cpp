@@ -41,6 +41,8 @@ struct Options
    std::uint32_t memory = 0;
    std::string testDir;
    std::string statsPath;
+   std::string mapPath;
+   std::string symsPath;
    bool simulate = false;
    bool diff = false;
    bool emitObject = false;
@@ -114,6 +116,22 @@ Options parseOptions(int argc, char* argv[])
       {
          options.link = true;
       }
+      else if(arg == "--emit-map")
+      {
+         if(i + 1 >= argc)
+         {
+            throw RebelError("--emit-map needs a path");
+         }
+         options.mapPath = argv[++i];
+      }
+      else if(arg == "--emit-syms")
+      {
+         if(i + 1 >= argc)
+         {
+            throw RebelError("--emit-syms needs a path");
+         }
+         options.symsPath = argv[++i];
+      }
       else if(arg == "--target")
       {
          if(i + 1 >= argc)
@@ -135,6 +153,8 @@ Options parseOptions(int argc, char* argv[])
          std::cout << "usage: RV32IToREBEL [options] <file.s|file.mto>...\n"
                       "  -o, --output <path>   output name (without extension)\n"
                       "  --link                link several units into one image\n"
+                      "  --emit-map <path>     write the unit and line map\n"
+                      "  --emit-syms <path>    write the symbol table with C lines\n"
                       "  --emit-obj            write a .mto object per input\n"
                       "  --emit-image          write an R6IM image next to the .tas\n"
                       "  --check               assemble and validate without writing outputs\n"
@@ -510,6 +530,16 @@ int linkUnits(const Options& options)
       {
          units.push_back(Linker::Unit::fromAssembly(stem, source));
       }
+      units.back().setPath(input);
+   }
+
+   if(!options.mapPath.empty())
+   {
+      Linker::writeMap(options.mapPath, units);
+   }
+   if(!options.symsPath.empty())
+   {
+      Linker::writeSymbols(options.symsPath, units);
    }
 
    Expressions::ExpressionList merged = Linker::link(units);
@@ -569,6 +599,7 @@ int singleUnit(const Options& options)
    Parser parser(&lexer);
    Expressions::ExpressionList parsed;
    parser.parse(parsed);
+   Linker::applyDebugDirectives(parsed);
 
    Expressions::ExpressionList translated;
    Translators::Translator::Translate(options.target, parsed, translated);
@@ -610,7 +641,7 @@ int run(int argc, char* argv[])
       std::cerr << "usage: RV32IToREBEL [options] <file.s|file.mto>...\n";
       return 2;
    }
-   if(options.link || (options.inputs.size() > 1))
+   if(options.link || (options.inputs.size() > 1) || !options.mapPath.empty() || !options.symsPath.empty())
    {
       return linkUnits(options);
    }

@@ -17,6 +17,8 @@ public:
    explicit Unit(std::string name);
 
    const std::string& getName() const { return m_name; }
+   const std::string& getPath() const { return m_path; }
+   void setPath(const std::string& path) { m_path = path; }
    Expressions::ExpressionList& getExpressions() { return m_expressions; }
    const Expressions::ExpressionList& getExpressions() const { return m_expressions; }
 
@@ -38,6 +40,7 @@ private:
    void renameSymbols();
 
    std::string m_name;
+   std::string m_path;
    Expressions::ExpressionList m_expressions;
    std::set<std::string> m_globals;
    std::set<std::string> m_locals;

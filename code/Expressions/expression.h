@@ -30,8 +30,19 @@ public:
    SourceLocation getLocation() const { return m_location; }
    void setLocation(const SourceLocation& location) { m_location = location; }
 
+   // Origin in the C source, filled from `.loc` and `.file` by the linker.
+   const std::string& getCFile() const { return m_cFile; }
+   int getCLine() const { return m_cLine; }
+   void setCSource(const std::string& file, int line)
+   {
+      m_cFile = file;
+      m_cLine = line;
+   }
+
 protected:
    SourceLocation m_location;
+   std::string m_cFile;
+   int m_cLine = 0;
 };
 
 

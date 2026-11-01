@@ -172,6 +172,10 @@ void Translator::Translate(const std::string& targetISAName, const Expressions::
             {
                (*it)->setLocation(instr->getLocation());
             }
+            if((*it)->getCLine() == 0)
+            {
+               (*it)->setCSource(instr->getCFile(), instr->getCLine());
+            }
             normalizeBranchOffset(*it);
          }
          break;

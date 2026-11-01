@@ -6,6 +6,7 @@
 #include <Translators/translator.h>
 
 #include <cctype>
+#include <iterator>
 #include <fstream>
 #include <sstream>
 
@@ -72,6 +73,74 @@ std::string renameTokens(const std::string& text, const std::map<std::string, st
 
 namespace Linker
 {
+void applyDebugDirectives(Expressions::ExpressionList& expressions)
+{
+   std::map<int, std::string> files;
+   std::string currentFile;
+   int currentLine = 0;
+   for(auto it = expressions.begin(); it != expressions.end();)
+   {
+      Expressions::Expression* expr = *it;
+      if(expr->getExpressionType() == Expressions::Expression::ExpressionType::DIRECTIVE)
+      {
+         Expressions::Directive* directive = static_cast<Expressions::Directive*>(expr);
+         const std::string& name = directive->getDirectiveName();
+         const std::vector<std::string>& params = directive->getDirectiveParameters();
+         if(name == ".file")
+         {
+            if(params.size() >= 2)
+            {
+               std::string value = params[1];
+               if((value.size() >= 2) && (value.front() == '"') && (value.back() == '"'))
+               {
+                  value = value.substr(1, value.size() - 2);
+               }
+               files[std::stoi(params[0])] = value;
+            }
+            it = expressions.erase(it);
+            delete expr;
+            continue;
+         }
+         if(name == ".loc")
+         {
+            if(!params.empty())
+            {
+               const int index = std::stoi(params[0]);
+               const auto found = files.find(index);
+               currentFile = (found == files.end()) ? std::string() : found->second;
+               currentLine = (params.size() >= 2) ? std::stoi(params[1]) : 0;
+            }
+            it = expressions.erase(it);
+            delete expr;
+            continue;
+         }
+      }
+      expr->setCSource(currentFile, currentLine);
+      ++it;
+   }
+
+   // A label comes before the `.loc` of its own body, so it takes the nearest following origin.
+   for(auto it = expressions.begin(); it != expressions.end(); ++it)
+   {
+      if((*it)->getExpressionType() != Expressions::Expression::ExpressionType::LABEL)
+      {
+         continue;
+      }
+      auto ahead = std::next(it);
+      for(int step = 0; (step < 3) && (ahead != expressions.end()); ++step, ++ahead)
+      {
+         if((*ahead)->getCLine() > 0)
+         {
+            (*it)->setCSource((*ahead)->getCFile(), (*ahead)->getCLine());
+            break;
+         }
+      }
+   }
+}
+}
+
+namespace Linker
+{
 Unit::Unit(std::string name)
    : m_name(std::move(name))
 {
@@ -83,6 +152,7 @@ Unit Unit::fromAssembly(const std::string& name, const std::string& source)
    Parser parser(&lexer);
    Expressions::ExpressionList parsed;
    parser.parse(parsed);
+   applyDebugDirectives(parsed);
 
    Unit unit(name);
    Translators::Translator::Translate("rebel-6", parsed, unit.m_expressions);
